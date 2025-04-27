@@ -1,0 +1,33 @@
+# HTTP and API
+aiohttp==3.9.1
+requests==2.31.0
+
+# Environment and configuration
+python-dotenv==1.0.0
+pydantic==2.4.2
+
+# Async support
+asyncio==3.4.3
+aiofiles==23.2.1
+
+# Document processing
+pypandoc==1.11
+python-docx==1.0.1
+PyYAML==6.0.1
+
+# Logging and monitoring
+python-json-logger==2.0.7
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-aiohttp==1.0.4
+
+# Development
+black==23.11.0
+isort==5.12.0
+mypy==1.7.0
+
+# System dependencies (install via system package manager):
+# - pandoc
+# - texlive-xetex (for PDF generation)

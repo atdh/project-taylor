@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  job-scraper:
+    build: ../services/job-scraper-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../services/job-scraper-service/.env
+    volumes:
+      - ../services/job-scraper-service:/app
+    depends_on:
+      - redis
+    networks:
+      - taylor-network
+
+  github-jobs:
+    build: ../services/github-jobs-service
+    ports:
+      - "8004:8004"
+    env_file:
+      - ../services/github-jobs-service/.env
+    volumes:
+      - ../services/github-jobs-service:/app
+    depends_on:
+      - redis
+    networks:
+      - taylor-network
+
+  filter:
+    build: ../services/filter-service
+    ports:
+      - "8001:8001"
+    env_file:
+      - ../services/filter-service/.env
+    volumes:
+      - ../services/filter-service:/app
+    depends_on:
+      - redis
+      - rabbitmq
+    networks:
+      - taylor-network
+
+  resume-generator:
+    build: ../services/resume-generator-service
+    ports:
+      - "8002:8002"
+    env_file:
+      - ../services/resume-generator-service/.env
+    volumes:
+      - ../services/resume-generator-service:/app
+      - resume-storage:/app/storage
+    depends_on:
+      - redis
+    networks:
+      - taylor-network
+
+  email-delivery:
+    build: ../services/email-delivery-service
+    ports:
+      - "8003:8003"
+    env_file:
+      - ../services/email-delivery-service/.env
+    volumes:
+      - ../services/email-delivery-service:/app
+    depends_on:
+      - redis
+    networks:
+      - taylor-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - taylor-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - taylor-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    networks:
+      - taylor-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/etc/grafana
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - taylor-network
+
+volumes:
+  redis-data:
+  rabbitmq-data:
+  resume-storage:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  taylor-network:
+    driver: bridge

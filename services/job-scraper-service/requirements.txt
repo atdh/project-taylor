@@ -1,0 +1,24 @@
+# requirements.txt - Runtime Dependencies
+
+# Web Framework
+fastapi>=0.100.0,<0.112.0
+pydantic>=2.4.2,<3.0.0
+
+# ASGI Server
+uvicorn[standard]>=0.20.0,<0.30.0
+
+# HTTP Clients (Review if all are needed)
+httpx>=0.25.0,<0.28.0
+requests==2.31.0 # Pinned version, confirm if needed
+aiohttp # Allow pip to choose version compatible with supabase/realtime
+
+# External Service Clients
+apify-client==1.4.1 # Or firecrawl client if used
+# firecrawl-py==...
+
+# Database / Backend Clients
+supabase==2.15.0
+
+# Logging and Monitoring
+python-json-logger==2.0.7
+
