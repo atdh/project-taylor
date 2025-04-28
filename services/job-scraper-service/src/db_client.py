@@ -3,12 +3,16 @@
 import os
 import logging
 from supabase import create_client, Client
-from postgrest.exceptions import APIError # Import specific exception for handling DB errors
+from postgrest.exceptions import APIError
 from typing import Optional, Dict, Any
+# --- Import shared logging setup ---
+from common_utils.logging import get_logger # Import the setup function
 
-# Initialize logger (consider using common_utils logger if integrated)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# --- Initialize shared logger ---
+# Remove the basicConfig and getLogger(__name__) lines
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# logger = logging.getLogger(__name__)
+logger = get_logger("job-scraper-service") # Call the function to get the configured logger
 
 # --- Supabase Client Initialization ---
 
@@ -26,15 +30,14 @@ if not supabase_key:
 try:
     # Create the Supabase client instance
     supabase_client = create_client(supabase_url, supabase_key)
-    logger.info("Supabase client initialized successfully.")
+    logger.info("Supabase client initialized successfully.") # Use the shared logger
 except Exception as e:
-    logger.error(f"Failed to initialize Supabase client: {e}", exc_info=True)
+    logger.error(f"Failed to initialize Supabase client: {e}", exc_info=True) # Use the shared logger
     supabase_client = None
-    raise e # Re-raise error to prevent service starting without DB
+    raise e
 
 # --- Database Operations ---
 
-# Changed from async def to def because the execute() call is synchronous
 def save_job_to_db(job_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Saves job data to the 'jobs' table in Supabase. (Synchronous)
@@ -51,7 +54,7 @@ def save_job_to_db(job_data: Dict[str, Any]) -> Dict[str, Any]:
         Exception: For other database operation errors.
     """
     if supabase_client is None:
-        logger.error("Supabase client is not available. Cannot save job.")
+        logger.error("Supabase client is not available. Cannot save job.") # Use the shared logger
         raise ConnectionError("Database client not initialized.")
 
     table_name = "jobs"
@@ -64,32 +67,30 @@ def save_job_to_db(job_data: Dict[str, Any]) -> Dict[str, Any]:
         "status": job_data.get("status", "new")
     }
 
-    logger.info(f"Attempting to insert job '{data_to_insert.get('title')}' into '{table_name}' table.")
+    logger.info(f"Attempting to insert job '{data_to_insert.get('title')}' into '{table_name}' table.") # Use the shared logger
 
     try:
-        # Perform the insert operation - REMOVED await
+        # Perform the insert operation
         response = supabase_client.table(table_name).insert(data_to_insert).execute()
 
-        logger.info(f"Insert response data: {response.data}")
-        logger.info(f"Insert response count: {response.count}")
+        logger.info(f"Insert response data: {response.data}") # Use the shared logger
+        logger.info(f"Insert response count: {response.count}") # Use the shared logger
 
         if response.data and len(response.data) > 0:
             inserted_job = response.data[0]
-            logger.info(f"Successfully inserted job with ID: {inserted_job.get('id')}")
+            logger.info(f"Successfully inserted job with ID: {inserted_job.get('id')}") # Use the shared logger
             return {
                 "db_status": "save_ok",
                 "job_id": inserted_job.get('id'),
                 "inserted_data": inserted_job
                 }
         else:
-            logger.warning("Insert operation completed but no data returned in response.")
-            # This might indicate an issue, potentially RLS preventing returning data?
-            # Or maybe insert just didn't return data for some reason.
+            logger.warning("Insert operation completed but no data returned in response.") # Use the shared logger
             return {"db_status": "save_warning", "message": "Insert completed but no data returned."}
 
     except APIError as e:
-        logger.error(f"Database API error saving job '{data_to_insert.get('title')}': {e.message}", exc_info=True)
+        logger.error(f"Database API error saving job '{data_to_insert.get('title')}': {e.message}", exc_info=True) # Use the shared logger
         raise e
     except Exception as e:
-        logger.error(f"Unexpected error saving job '{data_to_insert.get('title')}': {e}", exc_info=True)
+        logger.error(f"Unexpected error saving job '{data_to_insert.get('title')}': {e}", exc_info=True) # Use the shared logger
         raise e

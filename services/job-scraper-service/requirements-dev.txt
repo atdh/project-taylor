@@ -1,23 +1,23 @@
-    # requirements-dev.txt - Development and Testing Dependencies
+# requirements-dev.txt - Development and Testing Dependencies
 
-    # Install common utils in editable mode (relative path from job-scraper-service)
-    # -e ../../common-utils # REMOVED - We will use conftest.py for path modification instead
+# Install common utils in editable mode (relative path from job-scraper-service)
+-e ../../common_utils
 
-    # Base Runtime Requirements (install these first)
-    -r requirements.txt
+# Base Runtime Requirements (install these first)
+-r requirements.txt
 
-    # Testing
-    pytest>=7.4.3,<8.0.0
-    pytest-asyncio>=0.21.1,<0.24.0
-    pytest-aiohttp==1.0.4 # Only if testing aiohttp directly - remove if not needed
-    pytest-mock>=3.10.0,<4.0.0
+# Testing
+pytest>=7.4.3,<8.0.0
+pytest-asyncio>=0.21.1,<0.24.0
+pytest-aiohttp==1.0.4 # Only if testing aiohttp directly - remove if not needed
+pytest-mock>=3.10.0,<4.0.0
 
-    # Environment and Configuration
-    python-dotenv==1.0.0
+# Environment and Configuration
+python-dotenv==1.0.0
 
-    # Development Tools
-    black==23.11.0
-    isort==5.12.0
-    mypy==1.7.0
-    # Add other tools like flake8 or ruff if desired
+# Development Tools
+black==23.11.0
+isort==5.12.0
+mypy==1.7.0
+# Add other tools like flake8 or ruff if desired
     
