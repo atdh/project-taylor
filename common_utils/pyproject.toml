@@ -1,0 +1,16 @@
+    # project-taylor/common-utils/pyproject.toml
+    # Minimal configuration to make this directory installable with pip -e
+
+    [build-system]
+    requires = ["setuptools>=61.0"]
+    build-backend = "setuptools.build_meta"
+
+    [project]
+    name = "common_utils"
+    version = "0.1.0"
+    # Add other metadata if desired, but name and version are key
+
+    # --- Add this section ---
+    [tool.setuptools.packages.find]
+    where = ["."] # Look for packages in the current directory
+    
