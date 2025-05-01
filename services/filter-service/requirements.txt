@@ -1,10 +1,8 @@
-python-dotenv==1.0.0
-pydantic==2.4.2
-pytest==7.4.3
-scikit-learn==1.3.2
-nltk==3.8.1
-numpy==1.26.1
-pandas==2.1.2
-requests==2.31.0
-redis==5.0.1
-python-json-logger==2.0.7
+# requirements.txt - Runtime Dependencies for Filter Service
+
+# Database / Backend Clients
+supabase>=2.15.0,<3.0.0 # Use a range consistent with other services
+
+# Logging and Monitoring
+python-json-logger>=2.0.7,<3.0.0
+
