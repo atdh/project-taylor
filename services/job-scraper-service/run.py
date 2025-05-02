@@ -1,0 +1,9 @@
+from dotenv import load_dotenv
+import os
+
+if __name__ == "__main__":
+    # Load environment variables from .env file
+    load_dotenv()
+    
+    import uvicorn
+    uvicorn.run("src.api.main:app", host="0.0.0.0", port=8001, reload=True)

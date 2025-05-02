@@ -1,8 +1,16 @@
-# Job Scraper Service (MCP-First)
+# Job Scraper Service
 
-An MCP-compliant service that fetches job listings from multiple sources (Apify, Firecrawl) and standardizes the output format.
+> An MCP-compliant service that fetches job listings from multiple sources (Apify, Firecrawl) and standardizes the output format.
 
-## 🔌 MCP Interface
+## Table of Contents
+- [MCP Interface](#mcp-interface)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Operations](#operations)
+
+## MCP Interface
 
 ### Input Schema
 ```json
@@ -50,119 +58,108 @@ An MCP-compliant service that fetches job listings from multiple sources (Apify,
 }
 ```
 
-## 🚀 Features
+## Features
 
-- MCP-compliant input/output interface
-- Multiple job source support (Apify, Firecrawl)
-- Standardized job data format
-- Configurable filters and search parameters
-- Error handling and logging
-- Rate limiting and caching support
+- ✨ MCP-compliant input/output interface
+- 🔄 Multiple job source support (Apify, Firecrawl)
+- 📋 Standardized job data format
+- 🎯 Configurable filters and search parameters
+- 🛡️ Error handling and logging
+- ⚡ Rate limiting and caching support
 
-## 📋 Requirements
+## Quick Start
 
+1. Clone the repository and navigate to the service directory:
+```bash
+cd services/job-scraper-service
+```
+
+2. Create and activate a virtual environment:
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# Linux/macOS
+python3 -m venv venv
+source venv/bin/activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
+
+4. Configure environment:
+```bash
+# Windows
+copy .env.example .env
+
+# Linux/macOS
+cp .env.example .env
+
+# Edit .env with your API keys and settings
+```
+
+5. Run the development server:
+```bash
+python run.py
+```
+
+The server will start at http://localhost:8001 with hot reload enabled.
+
+For detailed setup instructions, environment configuration, and advanced usage, see [SETUP_AND_RUN.md](SETUP_AND_RUN.md).
+
+## Documentation
+
+### Architecture
+The service is structured as follows:
+```
+job-scraper-service/
+├── src/
+│   ├── api/            # FastAPI application
+│   ├── scraper/       # Job source clients
+│   └── db_client.py   # Database operations
+├── tests/            # Test suite
+├── run.py           # Development server runner
+└── requirements.txt # Dependencies
+```
+
+### Dependencies
 - Python 3.10+
-- Dependencies listed in requirements.txt
-- API keys for job sources (Apify, Firecrawl)
+- FastAPI for the REST API
+- Supabase for data storage
+- common_utils package (from project root)
+- Job source APIs (Apify, Firecrawl)
 
-## 🛠️ Setup
+## Development
 
-1. Create virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   venv\Scripts\activate     # Windows
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Configure environment:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys and settings
-   ```
-
-## 🏃‍♂️ Running
-
-### As MCP Tool
-```bash
-echo '{"source": "apify", "search_term": "python developer"}' | python src/main.py
-```
-
-### Development Server
-```bash
-uvicorn src.main:app --reload
-```
-
-## 🧪 Testing
-Running Tests with dotenv in PowerShell
-To run tests with environment variables loaded from your .env file in PowerShell, use the following command:
-
-
-python -m dotenv run -- python -m pytest tests/test_firecrawl_client.py
-This ensures that the environment variables are properly loaded during test execution.
-In SETUP_AND_RUN.md, under Running Tests, add:
-
-Running Tests with dotenv
-To run tests with environment variables loaded from your .env file, you can use the dotenv module.
-
-On PowerShell (Windows):
-
-python -m dotenv run -- python -m pytest tests/test_firecrawl_client.py
-On Linux/macOS (bash):
-
-python3 -m dotenv run -- python3 -m pytest tests/test_firecrawl_client.py
-This ensures that the environment variables defined in your .env file are loaded during test execution.
-
-If you do not have python-dotenv installed, you can install it with:
-
-
-pip install python-dotenv
-This completes the update based on your request.
-
-```bash
-pytest tests/
-```
-
-
-## 🐳 Docker
-
-Build:
-```bash
-docker build -t job-scraper-service .
-```
-
-Run:
-```bash
-docker run -p 8000:8000 job-scraper-service
-```
-
-## 📝 Adding New Job Sources
+### Adding New Job Sources
 
 1. Create new client in `src/scraper/`
 2. Implement standardized job format
-3. Add source to main.py router
+3. Add source to `main.py` router
 4. Update documentation
 
-## 🔍 Monitoring
+### Running Tests
+```bash
+# From job-scraper-service directory
+pytest tests/
+```
 
-- Logs in JSON format
-- Prometheus metrics (optional)
-- Rate limit tracking
-- Error reporting
+See [SETUP_AND_RUN.md](SETUP_AND_RUN.md) for detailed testing instructions.
 
-## 🔒 Security
+## Operations
 
-- API key validation
-- Rate limiting
-- Input validation
-- Error sanitization
+### Monitoring
+- 📝 Logs in JSON format
+- 📊 Prometheus metrics (optional)
+- 📈 Rate limit tracking
+- ⚠️ Error reporting
 
-## 📚 Documentation
-
-- [Architecture Overview](../../docs/architecture.md)
-- [API Documentation](../../docs/api.md)
-- [Development Guide](../../docs/development.md)
+### Security
+- 🔑 API key validation
+- 🚦 Rate limiting
+- ✅ Input validation
+- 🔒 Error sanitization

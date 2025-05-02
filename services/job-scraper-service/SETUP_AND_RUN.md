@@ -33,45 +33,84 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
+This will install:
+- Runtime dependencies from requirements.txt
+- Development dependencies from requirements-dev.txt
+- The common_utils package in editable mode (from project root)
+
 ## 3. Configure Environment Variables
 
 Copy the example environment file and edit it to add your API keys:
 
 ```bash
-copy .env.example .env   # Windows
-cp .env.example .env     # Linux/macOS
+# Windows
+copy .env.example .env
+
+# Linux/macOS
+cp .env.example .env
 ```
 
-Edit `.env` with your API keys for Apify and Firecrawl as needed.
+Required environment variables:
+- SUPABASE_URL: Your Supabase project URL
+- SUPABASE_KEY: Your Supabase API key
+- APIFY_API_KEY: Your Apify API key (if using Apify)
+- FIRECRAWL_API_KEY: Your Firecrawl API key (if using Firecrawl)
 
 ## 4. Running the Service
 
-### As MCP Tool
+### Development Server (FastAPI)
 
-You can run the service by piping a JSON request to the main.py script. For example:
+The service includes a convenient run script that:
+- Loads environment variables
+- Sets up correct Python paths
+- Starts the FastAPI server with hot reload
+
+To run the development server:
 
 ```bash
-echo {"source": "firecrawl", "search_term": "python developer"} | python src/main.py
+# Windows
+python run.py
+
+# Linux/macOS
+python3 run.py
 ```
 
-Make sure to run this command from the `services/job-scraper-service` directory.
+The server will start at http://localhost:8001 with:
+- Hot reload enabled (code changes will restart the server)
+- Proper imports for both service code and common_utils
+- Environment variables loaded from .env
 
-### Development Server (Optional)
+### As MCP Tool
 
-The README mentions running a development server with uvicorn, but `src/main.py` does not define an app. If you want to run a server, you may need to implement a FastAPI app or similar.
+You can run the service by piping a JSON request to the main.py script:
+
+```bash
+# Windows
+$env:PYTHONPATH = "$env:PYTHONPATH;.;../.." ; echo {"source": "firecrawl", "search_term": "python developer"} | python src/main.py
+
+# Linux/macOS
+PYTHONPATH=$PYTHONPATH:.:../.. echo '{"source": "firecrawl", "search_term": "python developer"}' | python src/main.py
+```
 
 ## 5. Running Tests
 
-Run the Firecrawl client tests using pytest:
+Run the tests using pytest:
 
 ```bash
-pytest tests/test_firecrawl_client.py
+# Windows
+$env:PYTHONPATH = "$env:PYTHONPATH;.;../.." ; pytest tests/
+
+# Linux/macOS
+PYTHONPATH=$PYTHONPATH:.:../.. pytest tests/
 ```
 
-The test file modifies `sys.path` to allow imports, so run this command from the `services/job-scraper-service` directory.
+The test files modify `sys.path` to allow imports, so run these commands from the `services/job-scraper-service` directory.
 
 ## Notes
 
-- Ensure your virtual environment is activated before running the service or tests.
-- The tests mock API calls, so they do not require real API keys.
-- For real API calls, ensure your `.env` file has valid API keys.
+- Always ensure your virtual environment is activated before running commands
+- The PYTHONPATH environment variable must include:
+  - The service directory (for src module imports)
+  - The project root (for common_utils imports)
+- The tests mock API calls, so they do not require real API keys
+- For real API calls, ensure your `.env` file has valid API keys
