@@ -38,6 +38,21 @@ app = FastAPI(
     version="0.1.0"
 )
 
+@app.get("/")
+def root():
+    """Root endpoint that provides API information and available endpoints."""
+    return {
+        "service": "Job Scraper Service",
+        "version": "0.1.0",
+        "available_endpoints": {
+            "GET /": "This information",
+            "GET /health": "Health check endpoint",
+            "POST /webhook/new-job": "Receive new job data",
+            "GET /docs": "Interactive API documentation (Swagger UI)",
+            "GET /redoc": "Alternative API documentation (ReDoc)"
+        }
+    }
+
 # --- API Endpoints ---
 @app.post(
     "/webhook/new-job",

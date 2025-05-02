@@ -1,63 +1,104 @@
+# services/filter-service/src/main.py
 import os
-from dotenv import load_dotenv
-import logging
-import json
-from typing import Dict, List
-from filter_logic import JobFilter
 import time
+import asyncio
+import logging
+import sys
+import argparse
+from typing import Dict, List, Any, Optional
 
-# Load environment variables
-load_dotenv()
+# Import shared logging setup
+from common_utils.logging import get_logger
+from src.filter_logic import is_relevant
+from src.db_client import fetch_new_jobs, update_job_status
 
-# Configure logging
-logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Set up logger
+logger = get_logger("filter-service.main")
 
-class FilterService:
-    def __init__(self):
-        self.job_filter = JobFilter()
-        self.input_queue = None  # TODO: Initialize message queue client
-        self.output_queue = None  # TODO: Initialize message queue client
+# Load filter criteria from environment or use defaults
+FILTER_CRITERIA = {
+    "required_skills": os.getenv("REQUIRED_SKILLS", "python,api").split(","),
+    "experience_level": os.getenv("EXPERIENCE_LEVEL", "mid"),
+    "exclude_companies": os.getenv("EXCLUDE_COMPANIES", "recruiting agency,staffing firm").split(","),
+    "preferred_companies": os.getenv("PREFERRED_COMPANIES", "").split(",") if os.getenv("PREFERRED_COMPANIES") else []
+}
 
-    async def process_job(self, job: Dict) -> bool:
-        """
-        Process a single job listing
-        Returns: True if job passes filters, False otherwise
-        """
-        try:
-            if self.job_filter.is_relevant(job):
-                await self.forward_to_resume_generator(job)
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Error processing job: {e}")
-            return False
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description="Filter Service")
+    parser.add_argument("--run-once", action="store_true", help="Run once and exit")
+    return parser.parse_args()
 
-    async def forward_to_resume_generator(self, job: Dict):
-        """Forward relevant job to resume generator service"""
-        # TODO: Implement message queue publishing
-        logger.info(f"Forwarding job {job.get('id')} to resume generator")
-
-    async def run(self):
-        """Main service loop"""
-        logger.info("Filter service starting...")
-        while True:
+def process_jobs() -> None:
+    """
+    Main job processing function:
+    1. Fetch new jobs from database
+    2. Apply filtering logic
+    3. Update job statuses
+    """
+    try:
+        logger.info("Fetching new jobs...")
+        jobs = fetch_new_jobs(limit=10)  # Process in small batches
+        
+        if not jobs:
+            logger.info("No new jobs to process")
+            return
+            
+        logger.info(f"Processing {len(jobs)} jobs")
+        
+        for job in jobs:
             try:
-                # TODO: Implement message queue consumption
-                await self.process_messages()
+                job_id = job.get("id")
+                is_job_relevant = is_relevant(job, FILTER_CRITERIA)
+                
+                # Update job status based on relevance
+                new_status = "filtered_relevant" if is_job_relevant else "filtered_irrelevant"
+                update_job_status(job_id, new_status)
+                
+                logger.info(f"Job {job_id} processed - Status: {new_status}")
+                
             except Exception as e:
-                logger.error(f"Error in main loop: {e}")
-            time.sleep(1)  # Prevent tight loop
+                logger.error(f"Error processing job {job.get('id')}: {e}", exc_info=True)
+                # Continue with next job
+        
+        logger.info("Job processing completed")
+        
+    except Exception as e:
+        logger.error(f"Fatal error in process_jobs: {e}", exc_info=True)
+        raise
 
-    async def process_messages(self):
-        """Process messages from the input queue"""
-        # TODO: Implement actual message processing
-        pass
+def main():
+    """
+    Main entry point for the filter service.
+    Runs the job processing function in a loop or as a one-off.
+    """
+    logger.info("Starting filter service")
+    
+    try:
+        # Parse command line arguments
+        args = parse_args()
+        
+        # Decide execution mode from arguments or environment
+        run_once = args.run_once or os.getenv("RUN_ONCE", "false").lower() == "true"
+        
+        if run_once:
+            # Single run mode (good for cron/scheduled execution)
+            process_jobs()
+        else:
+            # Continuous loop mode (for container deployment)
+            interval = int(os.getenv("PROCESSING_INTERVAL_SECONDS", "60"))
+            
+            while True:
+                process_jobs()
+                logger.info(f"Sleeping for {interval} seconds")
+                time.sleep(interval)
+                
+        logger.info("Filter service completed successfully")
+        
+    except Exception as e:
+        logger.error(f"Fatal error in filter service: {e}", exc_info=True)
+        # Exit with error code
+        exit(1)
 
 if __name__ == "__main__":
-    service = FilterService()
-    import asyncio
-    asyncio.run(service.run())
+    main()
