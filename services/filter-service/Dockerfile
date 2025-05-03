@@ -31,4 +31,5 @@ RUN adduser --disabled-password --gecos '' appuser
 USER appuser
 
 # Command to run the application
-CMD ["python", "src/main.py"]
+WORKDIR /app
+CMD ["python", "-m", "src.main"]
