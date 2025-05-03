@@ -1,0 +1,8 @@
+{
+    "build": {
+        "builder": "DOCKERFILE",
+        "buildArgs": {
+            "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        }
+    }
+}

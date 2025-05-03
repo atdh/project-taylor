@@ -1,5 +1,9 @@
 FROM python:3.11-slim
 
+# Define build-time argument for GitHub token
+ARG GITHUB_TOKEN
+# This needs to be set during docker build with --build-arg GITHUB_TOKEN=xxx
+
 WORKDIR /app
 
 # Install system dependencies required for NLTK and git
