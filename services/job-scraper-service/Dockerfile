@@ -18,8 +18,12 @@ WORKDIR /app
 # Copy only the requirements file first to leverage Docker cache
 COPY ./requirements.txt /app/requirements.txt
 
-# Install any needed system dependencies here (if any, e.g., build tools for certain Python packages)
-# RUN apt-get update && apt-get install -y --no-install-recommends some-package && rm -rf /var/lib/apt/lists/*
+# Install needed system dependencies including git for pip to clone repositories
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    git && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies specified in requirements.txt
 # Upgrade pip first, use --no-cache-dir to reduce image size
@@ -51,4 +55,3 @@ EXPOSE 8001
 # will be injected by the deployment platform (e.g., Railway).
 # Run on 0.0.0.0 to accept connections from outside the container.
 CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8001"]
-
