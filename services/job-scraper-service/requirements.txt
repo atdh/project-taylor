@@ -1,7 +1,6 @@
 # requirements.txt - Runtime Dependencies
 
-git+https://github.com/atdh/project-taylor.git#subdirectory=common_utils
-
+git+https://${GITHUB_TOKEN}@github.com/atdh/project-taylor.git#subdirectory=common_utils
 
 # Web Framework
 fastapi>=0.100.0,<0.112.0

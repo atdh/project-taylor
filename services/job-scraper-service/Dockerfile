@@ -6,7 +6,7 @@
 FROM python:3.12-slim
 
 # --- Environment Variables ---
-# Set environment variables to prevent Python from writing pyc files and buffering stdout/stderr
+# Set environment variables to prevent Python from writing  files and buffering stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
@@ -17,6 +17,12 @@ WORKDIR /app
 # --- Install Dependencies ---
 # Copy only the requirements file first to leverage Docker cache
 COPY ./requirements.txt /app/requirements.txt
+
+# Before pip install requirements
+# Replace environment variable placeholder in requirements.txt
+RUN if [ -n "$GITHUB_TOKEN" ]; then \
+    sed -i "s/\${GITHUB_TOKEN}/$GITHUB_TOKEN/g" requirements.txt; \
+fi
 
 # Install needed system dependencies including git for pip to clone repositories
 RUN apt-get update && \
