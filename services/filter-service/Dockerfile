@@ -15,6 +15,9 @@ RUN apt-get update && \
 
 # Copy requirements file first to leverage Docker cache
 COPY requirements.txt .
+
+# Make GitHub token available during pip install
+ENV GITHUB_TOKEN=${GITHUB_TOKEN}
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
