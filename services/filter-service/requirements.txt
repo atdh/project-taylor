@@ -1,7 +1,7 @@
 # requirements.txt - Runtime Dependencies for Filter Service
 
 # Internal libraries from git
-git+https://github.com/atdh/project-taylor.git#subdirectory=common_utils
+git+https://${GITHUB_TOKEN}@github.com/atdh/project-taylor.git#subdirectory=common_utils
 
 # Database / Backend Clients
 supabase>=2.15.0,<3.0.0 # Use a range consistent with other services
