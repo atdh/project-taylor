@@ -8,3 +8,6 @@ supabase>=2.15.0,<3.0.0 # Use a range consistent with other services
 
 # Logging and Monitoring
 python-json-logger>=2.0.7,<3.0.0
+
+# NLP Processing
+nltk>=3.8.1,<4.0.0
