@@ -2,13 +2,14 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies required for NLTK
+# Install system dependencies required for NLTK and git
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    build-essential && \
+    build-essential \
+    git && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
+# Copy requirements file first to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
