@@ -1,12 +1,12 @@
 # Filter Service
 
-This service is responsible for filtering and processing job listings based on relevance criteria.
+This service filters job listings based on configured criteria (skills, experience level, company preferences).
 
 ## Features
-- Processes incoming job listings
-- Applies customizable filtering criteria
-- Forwards relevant jobs to the resume generator service
-- Uses shared common_utils for logging and utilities
+- Processes jobs from the database
+- Applies configurable filtering criteria
+- Updates job status (filtered_relevant/filtered_irrelevant)
+- Uses shared common_utils for logging
 
 ## Quick Start
 
@@ -46,32 +46,92 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-5. Run the service:
+## Running the Service
+
+### Process Jobs Once
 ```bash
 # Windows
-$env:PYTHONPATH = "$env:PYTHONPATH;.;../.." ; python src/main.py
-
-# Linux/macOS
-PYTHONPATH=$PYTHONPATH:.:../.. python src/main.py
+cd services/filter-service
+venv\Scripts\activate
+python -m dotenv run -- python src/main.py --run-once
 ```
 
-## Development Setup
+### Run Continuously
+```bash
+# Windows
+cd services/filter-service
+venv\Scripts\activate
+python -m dotenv run -- python src/main.py
+```
 
-### Dependencies
-- Python 3.10+
-- Supabase for data storage
-- common_utils package (from project root)
+The service will:
+1. Fetch unprocessed jobs from Supabase
+2. Apply filtering criteria
+3. Update job status to either:
+   - filtered_relevant: Job matches criteria
+   - filtered_irrelevant: Job doesn't match criteria
 
-### Environment Variables
-Required variables in `.env`:
-- SUPABASE_URL: Your Supabase project URL
-- SUPABASE_KEY: Your Supabase API key
-- REQUIRED_SKILLS: Comma-separated list of required skills
-- EXPERIENCE_LEVEL: Desired experience level
-- EXCLUDE_COMPANIES: Companies to exclude
-- PREFERRED_COMPANIES: Preferred companies (optional)
+## Testing
 
-### Project Structure
+### Run Individual Test Files
+```bash
+# Windows
+cd services/filter-service
+venv\Scripts\activate
+$env:PYTHONPATH = "$env:PYTHONPATH;.;../.." ; python -m dotenv run -- pytest tests/test_filter_logic.py -v
+
+# Test database operations (requires Supabase connection)
+$env:PYTHONPATH = "$env:PYTHONPATH;.;../.." ; python -m dotenv run -- pytest tests/test_db_client.py -v
+
+# Test API endpoints
+$env:PYTHONPATH = "$env:PYTHONPATH;.;../.." ; python -m dotenv run -- pytest tests/test_main.py -v
+```
+
+### Test Output Examples
+```
+# Successful test run shows:
+============================= test session starts ==============================
+...
+collected 25 items
+
+tests/test_filter_logic.py::test_validate_job_details_valid PASSED    [  4%]
+...
+============================== 25 passed in 0.08s =============================
+```
+
+## Configuration
+
+### Required Environment Variables
+```bash
+# Supabase Configuration
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_api_key
+
+# Filter Criteria
+REQUIRED_SKILLS=python,api        # Comma-separated skills
+EXPERIENCE_LEVEL=mid             # junior, mid, senior
+EXCLUDE_COMPANIES=recruiting agency,staffing firm
+PREFERRED_COMPANIES=             # Optional, comma-separated
+
+# Optional Configuration
+LOG_LEVEL=INFO                  # DEBUG, INFO, WARNING, ERROR
+PROCESSING_INTERVAL_SECONDS=60  # For continuous mode
+```
+
+### Filter Criteria Examples
+1. Skills matching:
+   - Job must contain ANY of the REQUIRED_SKILLS in title or description
+   - Example: REQUIRED_SKILLS=python,api matches "Python Developer" or "API Engineer"
+
+2. Experience level matching:
+   - Job must match EXPERIENCE_LEVEL
+   - Example: EXPERIENCE_LEVEL=mid matches "Mid-level Engineer" or "Intermediate Developer"
+
+3. Company filtering:
+   - Excludes jobs from companies in EXCLUDE_COMPANIES
+   - Prioritizes companies in PREFERRED_COMPANIES
+
+## Project Structure
 ```
 filter-service/
 ├── src/
@@ -79,27 +139,13 @@ filter-service/
 │   ├── db_client.py     # Database operations
 │   └── main.py         # Service entry point
 ├── tests/             # Test suite
+│   ├── test_filter_logic.py
+│   ├── test_db_client.py
+│   └── test_main.py
 └── requirements.txt   # Dependencies
 ```
 
-## Testing
-
-Run tests with proper Python path:
-```bash
-# Windows
-$env:PYTHONPATH = "$env:PYTHONPATH;.;../.." ; pytest tests/
-
-# Linux/macOS
-PYTHONPATH=$PYTHONPATH:.:../.. pytest tests/
-```
-
-### Running Individual Test Files
-```bash
-pytest tests/test_filter_logic.py
-pytest tests/test_db_client.py
-```
-
-## Docker
+## Docker Support
 
 Build the image:
 ```bash
@@ -113,9 +159,15 @@ docker run -p 8000:8000 \
   filter-service
 ```
 
-## Notes
-- Always ensure your virtual environment is activated before running commands
-- The PYTHONPATH must include:
-  - The service directory (for src module imports)
-  - The project root (for common_utils imports)
-- When running in Docker, the paths are handled by the Dockerfile
+## Common Issues
+
+1. ModuleNotFoundError: No module named 'src'
+   - Solution: Make sure you're running commands from the filter-service directory
+
+2. Database connection errors
+   - Check SUPABASE_URL and SUPABASE_KEY in .env
+   - Verify Supabase service is accessible
+
+3. No jobs being processed
+   - Verify jobs exist in database with status='new'
+   - Check filter criteria matches job data

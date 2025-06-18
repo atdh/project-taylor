@@ -1,0 +1,21 @@
+# requirements-dev.txt - Development and Testing Dependencies
+
+# Install common utils in editable mode (relative path from filter-service)
+# This links directly to your source code for common_utils
+-e ../../common_utils
+
+# Base Runtime Requirements (install these first)
+-r requirements.txt
+
+# Testing
+pytest>=7.4.3,<8.0.0
+pytest-mock>=3.10.0,<4.0.0
+# Add pytest-asyncio if tests become async
+
+# Environment and Configuration
+python-dotenv>=1.0.0,<2.0.0
+
+# Development Tools (Optional but recommended)
+# black==23.11.0
+# isort==5.12.0
+# mypy==1.7.0

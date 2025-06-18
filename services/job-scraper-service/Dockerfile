@@ -20,8 +20,9 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 
 # --- Install Dependencies ---
-# Copy only the requirements file first to leverage Docker cache
+# Copy only the requirements files first to leverage Docker cache
 COPY ./requirements.txt /app/requirements.txt
+COPY ./requirements-prod.txt /app/requirements-prod.txt
 
 # Install needed system dependencies including git for pip to clone repositories
 RUN apt-get update && \
@@ -30,10 +31,10 @@ RUN apt-get update && \
     git && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies specified in requirements.txt
+# Install Python dependencies specified in requirements-prod.txt
 # Upgrade pip first, use --no-cache-dir to reduce image size
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements-prod.txt
 
 # --- Create Non-Root User ---
 # Create a non-root user and group to run the application for better security
