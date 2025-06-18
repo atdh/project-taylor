@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock, call
 
-from ..src.main import process_jobs, main, FILTER_CRITERIA
+from src.main import process_jobs, main, FILTER_CRITERIA
+from src.filter_logic import is_relevant
 
 # Mock job data
 MOCK_JOBS = [
@@ -35,7 +36,7 @@ def mock_db_operations():
 @pytest.fixture
 def mock_filter():
     """Fixture to provide mock filter logic"""
-    with patch('src.main.is_relevant') as mock:
+    with patch('src.filter_logic.is_relevant') as mock:
         yield mock
 
 def test_process_jobs_successful(mock_logger, mock_db_operations, mock_filter):

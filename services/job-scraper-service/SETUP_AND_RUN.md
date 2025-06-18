@@ -26,17 +26,24 @@ source venv/bin/activate
 
 ## 2. Install Dependencies
 
-Install the required packages from both requirements files:
-
+For development:
 ```bash
-pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
 This will install:
 - Runtime dependencies from requirements.txt
-- Development dependencies from requirements-dev.txt
+- Development dependencies (testing, linting tools)
 - The common_utils package in editable mode (from project root)
+
+For production:
+```bash
+pip install -r requirements-prod.txt
+```
+
+This will install:
+- Runtime dependencies from requirements.txt
+- The common_utils package from GitHub
 
 ## 3. Configure Environment Variables
 
@@ -114,3 +121,9 @@ The test files modify `sys.path` to allow imports, so run these commands from th
   - The project root (for common_utils imports)
 - The tests mock API calls, so they do not require real API keys
 - For real API calls, ensure your `.env` file has valid API keys
+
+# Install python-dotenv if not already
+pip install python-dotenv
+
+# Load .env into your environment for this session
+python -m dotenv run -- pytest tests/

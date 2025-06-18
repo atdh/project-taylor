@@ -145,8 +145,7 @@ job-scraper-service/
 ### Running Tests
 ```bash
 # From job-scraper-service directory
-pytest tests/
-```
+cd services/job-scraper-service; venv/Scripts/activate; python -m dotenv run -- pytest tests/
 
 See [SETUP_AND_RUN.md](SETUP_AND_RUN.md) for detailed testing instructions.
 

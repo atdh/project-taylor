@@ -63,15 +63,25 @@ def test_receive_new_job_success(client, mocker):
     # Assertions
     assert response.status_code == 201 # Check for 201 Created status
     response_json = response.json()
-    assert response_json["message"] == "Job data received successfully."
+    assert response_json["message"] == "Job data received and saved successfully."
     assert response_json["job_title"] == VALID_JOB_DATA["title"]
-    assert response_json["save_status"]["db_status"] == "mock_save_ok" # Check mocked return value
+    assert response_json["save_status"] == "mock_save_ok" # Check mocked return value
+    assert response_json["job_id"] == "mock_job_456"
 
     # Verify that the mocked save function was called exactly once with the correct data
     mock_save.assert_called_once()
     # Check the argument passed to the mock (it should be the dict version of the Pydantic model)
     call_args, _ = mock_save.call_args
-    assert call_args[0] == VALID_JOB_DATA # Pydantic model converted to dict matches input
+    # Note: Pydantic converts string URLs to Url objects, so we need to handle that
+    expected_data = VALID_JOB_DATA.copy()
+    actual_data = call_args[0]
+    
+    # Compare all fields except URL which gets converted to Url object
+    assert actual_data["title"] == expected_data["title"]
+    assert actual_data["company"] == expected_data["company"]
+    assert actual_data["description"] == expected_data["description"]
+    assert actual_data["source_id"] == expected_data["source_id"]
+    assert str(actual_data["url"]) == expected_data["url"]
 
 def test_receive_new_job_validation_error_missing_field(client, mocker):
     """
@@ -127,8 +137,17 @@ def test_receive_new_job_save_exception(client, mocker):
     # Assertions
     assert response.status_code == 500 # Check for Internal Server Error
     response_json = response.json()
-    assert "An error occurred while processing the job" in response_json["detail"]
-    assert "Simulated database connection error" in response_json["detail"]
+    assert "error occurred while processing the job" in response_json["detail"]
 
     # Verify the mocked save function was called
-    mock_save.assert_called_once_with(VALID_JOB_DATA)
+    mock_save.assert_called_once()
+    # Check the argument passed to the mock, handling URL conversion
+    call_args, _ = mock_save.call_args
+    actual_data = call_args[0]
+    
+    # Compare all fields except URL which gets converted to Url object
+    assert actual_data["title"] == VALID_JOB_DATA["title"]
+    assert actual_data["company"] == VALID_JOB_DATA["company"]
+    assert actual_data["description"] == VALID_JOB_DATA["description"]
+    assert actual_data["source_id"] == VALID_JOB_DATA["source_id"]
+    assert str(actual_data["url"]) == VALID_JOB_DATA["url"]

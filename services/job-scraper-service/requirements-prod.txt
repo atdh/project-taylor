@@ -1,0 +1,7 @@
+# requirements-prod.txt - Production Runtime Dependencies
+
+# Common Utils (from GitHub)
+git+https://${GITHUB_TOKEN}@github.com/atdh/project-taylor.git#subdirectory=common_utils
+
+# Base Runtime Requirements
+-r requirements.txt
