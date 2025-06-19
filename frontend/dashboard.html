@@ -120,68 +120,7 @@
 
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const analyzeBtn = document.getElementById('analyzeBtn');
-            const placeholder = document.getElementById('placeholder');
-            const analysisResults = document.getElementById('analysis-results');
-            const aiConfirmationSection = document.getElementById('ai-confirmation-section');
-
-            analyzeBtn.addEventListener('click', () => {
-                // 1. Get user input
-                const linkedin = document.getElementById('linkedin_profile').value;
-                const story = document.getElementById('personal_story').value;
-                const resume = document.getElementById('sample_resume').value;
-
-                if (!linkedin || !story || !resume) {
-                    alert('Please fill out all three fields.');
-                    return;
-                }
-                
-                // Show loading state (optional, could be more advanced)
-                analyzeBtn.textContent = 'Analyzing...';
-                analyzeBtn.disabled = true;
-
-                // --- MOCK BACKEND CALL ---
-                // In a real app, this is where you'd use fetch() to call your Python backend.
-                // We'll simulate a delay and then show the results.
-                setTimeout(() => {
-                    // 2. Hide placeholder, show results
-                    placeholder.classList.add('hidden');
-                    analysisResults.classList.remove('hidden');
-
-                    // 3. Reset button
-                    analyzeBtn.textContent = 'Analyze My Career';
-                    analyzeBtn.disabled = false;
-                    
-                    // This is just a simulation. In a real app, you'd dynamically create these buttons
-                    // based on the AI's response.
-                    const careerPathButtons = document.querySelectorAll('#career-paths button');
-                    careerPathButtons.forEach(button => {
-                        button.addEventListener('click', () => {
-                            // When a path is selected, show the confirmation and action buttons
-                            aiConfirmationSection.classList.remove('hidden');
-                        });
-                    });
-
-                }, 2000); // Simulate a 2-second API call
-            });
-
-            // Placeholder for findJobsBtn logic
-            const findJobsBtn = document.getElementById('findJobsBtn');
-            findJobsBtn.addEventListener('click', () => {
-                // This would trigger the job-scraper-service
-                alert('Triggering job scraper service with the new strategy!');
-            });
-            
-            // Placeholder for generateResumeBtn logic
-            const generateResumeBtn = document.getElementById('generateResumeBtn');
-            generateResumeBtn.addEventListener('click', () => {
-                // This would trigger the resume-generator-service
-                alert('Generating a perfectly tailored resume...');
-            });
-        });
-    </script>
+    <script src="dashboard.js"></script>
 
 </body>
 </html>
