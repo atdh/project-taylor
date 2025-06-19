@@ -1,0 +1,16 @@
+#requirements.txt for ai-copilot-service
+#Web Framework
+fastapi>=0.110.0
+pydantic>=2.5.0
+
+#ASGI Server
+uvicorn[standard]>=0.29.0
+
+#Google AI Client
+google-generativeai>=0.5.4
+
+#Environment variables
+python-dotenv>=1.0.0
+
+#for handling Cross-Origin Resource Sharing (CORS)
+fastapi-cors>=0.0.1
