@@ -1,6 +1,9 @@
 // Configuration
 const API_URL = 'http://localhost:8002';
 
+// Global state for selected career paths (MVP approach)
+let selectedCareerPaths = [];
+
 // Validation Constants
 const VALIDATION_RULES = {
     linkedin: {
@@ -215,26 +218,92 @@ function displayCareerPaths(careerPaths) {
     const careerPathsContainer = document.getElementById('career-paths');
     careerPathsContainer.innerHTML = ''; // Clear existing paths
 
-    careerPaths.forEach(path => {
-        const button = document.createElement('button');
-        button.className = 'w-full text-left p-4 bg-gray-100 hover:bg-indigo-100 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500';
-        button.innerHTML = `
-            <p class="font-semibold text-gray-800">${path.title}</p>
-            <p class="text-sm text-gray-600 mt-1">${path.strengths}</p>
-            <p class="text-xs text-gray-500 mt-2">Keywords: ${path.keywords.join(', ')}</p>
+    careerPaths.forEach((path, index) => {
+        const label = document.createElement('label');
+        label.className = 'flex items-start p-4 bg-gray-100 hover:bg-indigo-50 rounded-lg border border-gray-200 cursor-pointer transition-colors';
+        label.innerHTML = `
+            <input type="checkbox" class="career-path-checkbox mt-1 mr-3 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" 
+                   data-path="${path.title}" 
+                   data-keywords="${path.keywords.join(', ')}"
+                   data-strengths="${path.strengths || ''}"
+                   data-index="${index}">
+            <div class="flex-1">
+                <p class="font-semibold text-gray-800">${path.title}</p>
+                <p class="text-sm text-gray-600 mt-1">${path.strengths || ''}</p>
+                <p class="text-xs text-gray-500 mt-2">Keywords: ${path.keywords.join(', ')}</p>
+            </div>
         `;
+
+        careerPathsContainer.appendChild(label);
+    });
+
+    // Set up event listeners for checkboxes
+    setupCareerPathSelection();
+}
+
+// MVP Multi-path selection logic
+function setupCareerPathSelection() {
+    const checkboxes = document.querySelectorAll('.career-path-checkbox');
+    const continueBtn = document.getElementById('continueWithSelectionBtn');
+    const selectionSummary = document.getElementById('selection-summary');
+    const selectedPathsList = document.getElementById('selected-paths-list');
+
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            updateSelectedPaths();
+        });
+    });
+
+    continueBtn.addEventListener('click', () => {
+        if (selectedCareerPaths.length > 0) {
+            showConfirmationSection();
+        }
+    });
+
+    function updateSelectedPaths() {
+        selectedCareerPaths = [];
+        const checkedBoxes = document.querySelectorAll('.career-path-checkbox:checked');
         
-        button.addEventListener('click', () => {
-            // Show confirmation section when a path is selected
-            document.getElementById('ai-confirmation-section').classList.remove('hidden');
-            
-            // Update the confirmation text
-            const confirmationText = document.querySelector('#ai-confirmation-section p');
-            confirmationText.textContent = `New plan: We are targeting **${path.title}** roles. I will now tailor your resume and search for matching jobs.`;
+        checkedBoxes.forEach(checkbox => {
+            selectedCareerPaths.push({
+                title: checkbox.dataset.path,
+                keywords: checkbox.dataset.keywords.split(', '),
+                strengths: checkbox.dataset.strengths
+            });
         });
 
-        careerPathsContainer.appendChild(button);
-    });
+        // Update UI based on selection
+        if (selectedCareerPaths.length > 0) {
+            continueBtn.disabled = false;
+            selectionSummary.classList.remove('hidden');
+            selectedPathsList.innerHTML = selectedCareerPaths.map(path => 
+                `<span class="inline-block bg-white px-2 py-1 rounded text-xs mr-2 mb-1">${path.title}</span>`
+            ).join('');
+        } else {
+            continueBtn.disabled = true;
+            selectionSummary.classList.add('hidden');
+        }
+    }
+}
+
+function showConfirmationSection() {
+    const confirmationSection = document.getElementById('ai-confirmation-section');
+    const confirmationText = document.querySelector('#ai-confirmation-section p');
+    
+    // Generate confirmation text for multiple paths
+    let pathText;
+    if (selectedCareerPaths.length === 1) {
+        pathText = `**${selectedCareerPaths[0].title}** roles`;
+    } else if (selectedCareerPaths.length === 2) {
+        pathText = `**${selectedCareerPaths[0].title}** and **${selectedCareerPaths[1].title}** roles`;
+    } else {
+        const lastPath = selectedCareerPaths[selectedCareerPaths.length - 1];
+        const otherPaths = selectedCareerPaths.slice(0, -1);
+        pathText = `**${otherPaths.map(p => p.title).join('**, **')}**, and **${lastPath.title}** roles`;
+    }
+    
+    confirmationText.textContent = `New plan: We are targeting ${pathText}. I will now tailor your resume and search for matching jobs across these career paths.`;
+    confirmationSection.classList.remove('hidden');
 }
 
 // Enhanced Event Handlers
@@ -255,7 +324,38 @@ document.addEventListener('DOMContentLoaded', () => {
             showLoading();
             
             // Validate and call the AI Copilot Service
-            const result = await validateAndAnalyzeCareer(linkedin, story, resume);
+            let result;
+            try {
+                result = await validateAndAnalyzeCareer(linkedin, story, resume);
+            } catch (error) {
+                // Fallback to mock data for MVP testing when backend is not available
+                console.log('Backend not available, using mock data for MVP testing');
+                result = {
+                    careerPaths: [
+                        {
+                            title: "Technical Project Manager",
+                            strengths: "Strong leadership and technical background",
+                            keywords: ["Agile", "Team Leadership", "Scrum", "MERN Stack"]
+                        },
+                        {
+                            title: "Senior Front-End Engineer",
+                            strengths: "Deep expertise in modern web technologies",
+                            keywords: ["React", "TypeScript", "Performance", "CI/CD"]
+                        },
+                        {
+                            title: "Full-Stack Developer",
+                            strengths: "Versatile across frontend and backend",
+                            keywords: ["JavaScript", "Node.js", "Database Design", "API Development"]
+                        },
+                        {
+                            title: "DevOps Engineer",
+                            strengths: "Infrastructure and automation expertise",
+                            keywords: ["Docker", "Kubernetes", "AWS", "CI/CD Pipelines"]
+                        }
+                    ]
+                };
+            }
+            
             if (!result) return; // Validation failed
             
             // Hide placeholder, show results
@@ -273,16 +373,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Initialize other button handlers
+    // Initialize other button handlers with multi-path support
     const findJobsBtn = document.getElementById('findJobsBtn');
     findJobsBtn.addEventListener('click', () => {
-        // TODO: Implement job scraping integration
-        alert('Triggering job scraper service with the new strategy!');
+        if (selectedCareerPaths.length > 0) {
+            const pathNames = selectedCareerPaths.map(p => p.title).join(', ');
+            alert(`Triggering job scraper service for: ${pathNames}`);
+            // TODO: Implement job scraping integration with multiple paths
+        } else {
+            alert('Please select career paths first.');
+        }
     });
     
     const generateResumeBtn = document.getElementById('generateResumeBtn');
     generateResumeBtn.addEventListener('click', () => {
-        // TODO: Implement resume generation
-        alert('Generating a perfectly tailored resume...');
+        if (selectedCareerPaths.length > 0) {
+            const pathNames = selectedCareerPaths.map(p => p.title).join(', ');
+            alert(`Generating tailored resume for: ${pathNames}`);
+            // TODO: Implement resume generation with multiple paths
+        } else {
+            alert('Please select career paths first.');
+        }
     });
 });
