@@ -1,8 +1,105 @@
 // Configuration
 const API_URL = 'http://localhost:8002';
 
+// Validation Constants
+const VALIDATION_RULES = {
+    linkedin: {
+        minLength: 20,
+        pattern: /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+\/?$/,
+        message: 'Please enter a valid LinkedIn profile URL (e.g., https://linkedin.com/in/username)'
+    },
+    story: {
+        minLength: 100,
+        maxLength: 5000,
+        message: 'Personal story should be between 100 and 5000 characters'
+    },
+    resume: {
+        minLength: 200,
+        maxLength: 10000,
+        message: 'Resume should be between 200 and 10000 characters'
+    }
+};
+
+// Validation Functions
+function validateLinkedIn(url) {
+    if (!url) return 'LinkedIn URL is required';
+    if (!VALIDATION_RULES.linkedin.pattern.test(url)) {
+        return VALIDATION_RULES.linkedin.message;
+    }
+    return null;
+}
+
+function validateStory(story) {
+    if (!story) return 'Personal story is required';
+    if (story.length < VALIDATION_RULES.story.minLength) {
+        return `Personal story is too short (minimum ${VALIDATION_RULES.story.minLength} characters)`;
+    }
+    if (story.length > VALIDATION_RULES.story.maxLength) {
+        return `Personal story is too long (maximum ${VALIDATION_RULES.story.maxLength} characters)`;
+    }
+    return null;
+}
+
+function validateResume(resume) {
+    if (!resume) return 'Resume is required';
+    if (resume.length < VALIDATION_RULES.resume.minLength) {
+        return `Resume is too short (minimum ${VALIDATION_RULES.resume.minLength} characters)`;
+    }
+    if (resume.length > VALIDATION_RULES.resume.maxLength) {
+        return `Resume is too long (maximum ${VALIDATION_RULES.resume.maxLength} characters)`;
+    }
+    return null;
+}
+
+// UI Feedback Functions
+function showFieldError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    const errorDiv = document.getElementById(`${fieldId}-error`) || createErrorDiv(fieldId);
+    
+    field.classList.add('border-red-500');
+    errorDiv.textContent = message;
+    errorDiv.classList.remove('hidden');
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorDiv = document.getElementById(`${fieldId}-error`);
+    
+    if (field) field.classList.remove('border-red-500');
+    if (errorDiv) errorDiv.classList.add('hidden');
+}
+
+function createErrorDiv(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorDiv = document.createElement('div');
+    errorDiv.id = `${fieldId}-error`;
+    errorDiv.className = 'text-red-500 text-sm mt-1';
+    field.parentNode.insertBefore(errorDiv, field.nextSibling);
+    return errorDiv;
+}
+
 // API Client Functions
-async function analyzeCareer(linkedinUrl, personalStory, sampleResume) {
+async function validateAndAnalyzeCareer(linkedinUrl, personalStory, sampleResume) {
+    // Validate all inputs first
+    const linkedinError = validateLinkedIn(linkedinUrl);
+    const storyError = validateStory(personalStory);
+    const resumeError = validateResume(sampleResume);
+
+    // Clear previous errors
+    clearFieldError('linkedin_profile');
+    clearFieldError('personal_story');
+    clearFieldError('sample_resume');
+
+    // Show any validation errors
+    if (linkedinError) showFieldError('linkedin_profile', linkedinError);
+    if (storyError) showFieldError('personal_story', storyError);
+    if (resumeError) showFieldError('sample_resume', resumeError);
+
+    // If any validation failed, don't proceed
+    if (linkedinError || storyError || resumeError) {
+        return null;
+    }
+
     try {
         const response = await fetch(`${API_URL}/analyze`, {
             method: 'POST',
@@ -17,7 +114,8 @@ async function analyzeCareer(linkedinUrl, personalStory, sampleResume) {
         });
 
         if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `API Error: ${response.status}`);
         }
 
         return await response.json();
@@ -27,10 +125,62 @@ async function analyzeCareer(linkedinUrl, personalStory, sampleResume) {
     }
 }
 
-// UI Update Functions
+// Real-time validation
+function setupRealTimeValidation() {
+    const linkedinField = document.getElementById('linkedin_profile');
+    const storyField = document.getElementById('personal_story');
+    const resumeField = document.getElementById('sample_resume');
+
+    linkedinField.addEventListener('blur', () => {
+        const error = validateLinkedIn(linkedinField.value);
+        if (error) {
+            showFieldError('linkedin_profile', error);
+        } else {
+            clearFieldError('linkedin_profile');
+        }
+    });
+
+    storyField.addEventListener('input', debounce(() => {
+        const error = validateStory(storyField.value);
+        if (error) {
+            showFieldError('personal_story', error);
+        } else {
+            clearFieldError('personal_story');
+        }
+    }, 500));
+
+    resumeField.addEventListener('input', debounce(() => {
+        const error = validateResume(resumeField.value);
+        if (error) {
+            showFieldError('sample_resume', error);
+        } else {
+            clearFieldError('sample_resume');
+        }
+    }, 500));
+}
+
+// Utility function for debouncing
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Enhanced UI Update Functions
 function showLoading() {
     const placeholder = document.getElementById('placeholder');
     const analysisResults = document.getElementById('analysis-results');
+    
+    // Clear any previous errors
+    clearFieldError('linkedin_profile');
+    clearFieldError('personal_story');
+    clearFieldError('sample_resume');
     
     placeholder.classList.remove('hidden');
     analysisResults.classList.add('hidden');
@@ -38,6 +188,15 @@ function showLoading() {
     const analyzeBtn = document.getElementById('analyzeBtn');
     analyzeBtn.textContent = 'Analyzing...';
     analyzeBtn.disabled = true;
+    
+    // Add loading animation
+    placeholder.innerHTML = `
+        <div class="animate-pulse flex flex-col items-center">
+            <div class="rounded-full bg-gray-200 h-12 w-12 mb-4"></div>
+            <div class="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+            <div class="h-3 bg-gray-200 rounded w-32"></div>
+        </div>
+    `;
 }
 
 function hideLoading() {
@@ -76,28 +235,26 @@ function displayCareerPaths(careerPaths) {
     });
 }
 
-// Event Handlers
+// Enhanced Event Handlers
 document.addEventListener('DOMContentLoaded', () => {
+    // Set up real-time validation
+    setupRealTimeValidation();
     const analyzeBtn = document.getElementById('analyzeBtn');
     const placeholder = document.getElementById('placeholder');
     const analysisResults = document.getElementById('analysis-results');
 
     analyzeBtn.addEventListener('click', async () => {
         // Get user input
-        const linkedin = document.getElementById('linkedin_profile').value;
-        const story = document.getElementById('personal_story').value;
-        const resume = document.getElementById('sample_resume').value;
-
-        if (!linkedin || !story || !resume) {
-            showError('Please fill out all three fields.');
-            return;
-        }
+        const linkedin = document.getElementById('linkedin_profile').value.trim();
+        const story = document.getElementById('personal_story').value.trim();
+        const resume = document.getElementById('sample_resume').value.trim();
 
         try {
             showLoading();
             
-            // Call the AI Copilot Service
-            const result = await analyzeCareer(linkedin, story, resume);
+            // Validate and call the AI Copilot Service
+            const result = await validateAndAnalyzeCareer(linkedin, story, resume);
+            if (!result) return; // Validation failed
             
             // Hide placeholder, show results
             placeholder.classList.add('hidden');
