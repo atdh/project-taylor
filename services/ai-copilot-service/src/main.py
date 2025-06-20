@@ -11,35 +11,45 @@ from .gemini_client import get_career_analysis
 from fastapi.middleware.cors import CORSMiddleware
 
 # --- Validation Constants ---
-MIN_STORY_LENGTH = 100
-MAX_STORY_LENGTH = 5000
-MIN_RESUME_LENGTH = 200
-MAX_RESUME_LENGTH = 10000
+MIN_STORY_WORDS = 50  # About 2-3 paragraphs minimum
+MAX_STORY_WORDS = 5000  # Generous upper limit
+MIN_RESUME_WORDS = 100  # About one page minimum
+MAX_RESUME_WORDS = 2000  # About 4 pages maximum
 LINKEDIN_URL_PATTERN = r'^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+\/?$'
 
 # --- Pydantic Model for Incoming Request Data ---
 class AnalysisRequest(BaseModel):
     linkedin_url: HttpUrl
-    personal_story: constr(min_length=MIN_STORY_LENGTH, max_length=MAX_STORY_LENGTH)
-    sample_resume: constr(min_length=MIN_RESUME_LENGTH, max_length=MAX_RESUME_LENGTH)
+    personal_story: str
+    sample_resume: str
+
+    @validator('personal_story')
+    def validate_story_length(cls, v):
+        words = len(v.split())
+        if words < MIN_STORY_WORDS:
+            raise ValueError(f'Personal story must be at least {MIN_STORY_WORDS} words')
+        if words > MAX_STORY_WORDS:
+            raise ValueError(f'Personal story must not exceed {MAX_STORY_WORDS} words')
+        if v.strip() == '':
+            raise ValueError('Personal story cannot be empty or just whitespace')
+        return v
+
+    @validator('sample_resume')
+    def validate_resume_length(cls, v):
+        words = len(v.split())
+        if words < MIN_RESUME_WORDS:
+            raise ValueError(f'Resume must be at least {MIN_RESUME_WORDS} words')
+        if words > MAX_RESUME_WORDS:
+            raise ValueError(f'Resume must not exceed {MAX_RESUME_WORDS} words')
+        if v.strip() == '':
+            raise ValueError('Sample resume cannot be empty or just whitespace')
+        return v
 
     @validator('linkedin_url')
     def validate_linkedin_url(cls, v):
         url_str = str(v)
         if not re.match(LINKEDIN_URL_PATTERN, url_str):
             raise ValueError('Must be a valid LinkedIn profile URL (e.g., https://linkedin.com/in/username)')
-        return v
-
-    @validator('personal_story')
-    def validate_story_content(cls, v):
-        if v.strip() == '':
-            raise ValueError('Personal story cannot be empty or just whitespace')
-        return v
-
-    @validator('sample_resume')
-    def validate_resume_content(cls, v):
-        if v.strip() == '':
-            raise ValueError('Sample resume cannot be empty or just whitespace')
         return v
 
 # --- FastAPI Application Instance ---
