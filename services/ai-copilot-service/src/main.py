@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, validator, constr
 from typing import Dict, Any
 import os
+import re
 
 # Import our Gemini client function
 from .gemini_client import get_career_analysis
@@ -9,11 +10,37 @@ from .gemini_client import get_career_analysis
 # For handling requests from our front-end
 from fastapi.middleware.cors import CORSMiddleware
 
+# --- Validation Constants ---
+MIN_STORY_LENGTH = 100
+MAX_STORY_LENGTH = 5000
+MIN_RESUME_LENGTH = 200
+MAX_RESUME_LENGTH = 10000
+LINKEDIN_URL_PATTERN = r'^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+\/?$'
+
 # --- Pydantic Model for Incoming Request Data ---
 class AnalysisRequest(BaseModel):
     linkedin_url: HttpUrl
-    personal_story: str
-    sample_resume: str
+    personal_story: constr(min_length=MIN_STORY_LENGTH, max_length=MAX_STORY_LENGTH)
+    sample_resume: constr(min_length=MIN_RESUME_LENGTH, max_length=MAX_RESUME_LENGTH)
+
+    @validator('linkedin_url')
+    def validate_linkedin_url(cls, v):
+        url_str = str(v)
+        if not re.match(LINKEDIN_URL_PATTERN, url_str):
+            raise ValueError('Must be a valid LinkedIn profile URL (e.g., https://linkedin.com/in/username)')
+        return v
+
+    @validator('personal_story')
+    def validate_story_content(cls, v):
+        if v.strip() == '':
+            raise ValueError('Personal story cannot be empty or just whitespace')
+        return v
+
+    @validator('sample_resume')
+    def validate_resume_content(cls, v):
+        if v.strip() == '':
+            raise ValueError('Sample resume cannot be empty or just whitespace')
+        return v
 
 # --- FastAPI Application Instance ---
 app = FastAPI(
