@@ -9,14 +9,14 @@ const VALIDATION_RULES = {
         message: 'Please enter a valid LinkedIn profile URL (e.g., https://linkedin.com/in/username)'
     },
     story: {
-        minLength: 100,
-        maxLength: 5000,
-        message: 'Personal story should be between 100 and 5000 characters'
+        minWords: 50,
+        maxWords: 5000,
+        message: 'Personal story should be between 50 and 5000 words'
     },
     resume: {
-        minLength: 200,
-        maxLength: 10000,
-        message: 'Resume should be between 200 and 10000 characters'
+        minWords: 100,
+        maxWords: 2000,
+        message: 'Resume should be between 100 and 2000 words'
     }
 };
 
@@ -31,22 +31,24 @@ function validateLinkedIn(url) {
 
 function validateStory(story) {
     if (!story) return 'Personal story is required';
-    if (story.length < VALIDATION_RULES.story.minLength) {
-        return `Personal story is too short (minimum ${VALIDATION_RULES.story.minLength} characters)`;
+    const words = story.trim().split(/\s+/).length;
+    if (words < VALIDATION_RULES.story.minWords) {
+        return `Personal story is too short (minimum ${VALIDATION_RULES.story.minWords} words)`;
     }
-    if (story.length > VALIDATION_RULES.story.maxLength) {
-        return `Personal story is too long (maximum ${VALIDATION_RULES.story.maxLength} characters)`;
+    if (words > VALIDATION_RULES.story.maxWords) {
+        return `Personal story is too long (maximum ${VALIDATION_RULES.story.maxWords} words)`;
     }
     return null;
 }
 
 function validateResume(resume) {
     if (!resume) return 'Resume is required';
-    if (resume.length < VALIDATION_RULES.resume.minLength) {
-        return `Resume is too short (minimum ${VALIDATION_RULES.resume.minLength} characters)`;
+    const words = resume.trim().split(/\s+/).length;
+    if (words < VALIDATION_RULES.resume.minWords) {
+        return `Resume is too short (minimum ${VALIDATION_RULES.resume.minWords} words)`;
     }
-    if (resume.length > VALIDATION_RULES.resume.maxLength) {
-        return `Resume is too long (maximum ${VALIDATION_RULES.resume.maxLength} characters)`;
+    if (words > VALIDATION_RULES.resume.maxWords) {
+        return `Resume is too long (maximum ${VALIDATION_RULES.resume.maxWords} words)`;
     }
     return null;
 }
