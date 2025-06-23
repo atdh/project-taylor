@@ -198,6 +198,10 @@ async def refine_strategy(request: RefinementRequest) -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 @app.post(
     "/refine-strategy",
     summary="Refine career strategy based on user preferences",
@@ -208,6 +212,7 @@ async def refine_strategy_detailed(request: RefineStrategyRequest) -> Dict[str, 
     """
     Receives user refinement preferences and returns additional career path suggestions.
     """
+    logger.info(f"Received /refine-strategy request with selected_paths: {request.selected_paths} and refinement_text: {request.refinement_text[:50]}...")
     try:
         refinement_result = await get_strategy_refinement(
             linkedin_url=str(request.linkedin_url),
@@ -216,10 +221,14 @@ async def refine_strategy_detailed(request: RefineStrategyRequest) -> Dict[str, 
             selected_paths=request.selected_paths,
             refinement_text=request.refinement_text
         )
+        logger.info("Refinement result successfully obtained from Gemini API.")
         return refinement_result
     except ConnectionError as e:
+        logger.error(f"ConnectionError in /refine-strategy: {e}")
         raise HTTPException(status_code=503, detail=f"AI Service Error: {e}")
     except ValueError as e:
+        logger.error(f"ValueError in /refine-strategy: {e}")
         raise HTTPException(status_code=400, detail=f"Data Error: {e}")
     except Exception as e:
+        logger.error(f"Unexpected error in /refine-strategy: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")

@@ -163,6 +163,7 @@ async def get_strategy_refinement(linkedin_url: str, personal_story: str, sample
         raise ConnectionError("Gemini API client is not configured. Check your API key.")
 
     try:
+        logger.info(f"Preparing to send refinement prompt with selected_paths: {selected_paths} and refinement_text: {refinement_text[:50]}...")
         prompt = construct_refinement_prompt(linkedin_url, personal_story, sample_resume, selected_paths, refinement_text)
         logger.info("Sending refinement prompt to Gemini API...")
         
@@ -190,6 +191,8 @@ async def get_strategy_refinement(linkedin_url: str, personal_story: str, sample
     except Exception as e:
         logger.error(f"An unexpected error occurred during refinement: {e}", exc_info=True)
         raise
+        # Clean the response to ensure it's valid JSON
+        # Clean the response to ensure it's valid JSON
 
 # Simple refinement function for basic strategy updates
 async def get_refined_strategy(refinement: str, selected_paths: List[CareerPath]) -> str:
