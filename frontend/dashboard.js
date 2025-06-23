@@ -279,26 +279,6 @@ function displayCareerPaths(newCareerPaths, append = false, refined = false) {
     // Set up event listeners for checkboxes
     setupCareerPathSelection();
 
-    // Set up toggle buttons for collapsible details
-    const toggleButtons = careerPathsContainer.querySelectorAll('.toggle-details');
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const label = button.closest('label');
-            const details = label.querySelector('.career-path-details');
-            const expanded = button.getAttribute('aria-expanded') === 'true';
-
-            if (expanded) {
-                details.classList.add('hidden');
-                button.textContent = '+';
-                button.setAttribute('aria-expanded', 'false');
-            } else {
-                details.classList.remove('hidden');
-                button.textContent = '−';
-                button.setAttribute('aria-expanded', 'true');
-            }
-        });
-    });
-
     // Add subtle hover/focus feedback on card body or title section
     const labels = careerPathsContainer.querySelectorAll('label');
     labels.forEach(label => {
@@ -382,6 +362,37 @@ function showConfirmationSection() {
     confirmationSection.classList.remove('hidden');
 }
 
+// Setup event delegation for toggle buttons
+function setupToggleEventDelegation() {
+    const careerPathsContainer = document.getElementById('career-paths');
+    
+    // Remove any existing event listener to prevent duplicates
+    careerPathsContainer.removeEventListener('click', handleToggleClick);
+    
+    // Add event delegation for toggle buttons
+    careerPathsContainer.addEventListener('click', handleToggleClick);
+}
+
+function handleToggleClick(event) {
+    // Check if the clicked element is a toggle button
+    if (event.target.classList.contains('toggle-details')) {
+        const button = event.target;
+        const label = button.closest('label');
+        const details = label.querySelector('.career-path-details');
+        const expanded = button.getAttribute('aria-expanded') === 'true';
+
+        if (expanded) {
+            details.classList.add('hidden');
+            button.textContent = '+';
+            button.setAttribute('aria-expanded', 'false');
+        } else {
+            details.classList.remove('hidden');
+            button.textContent = '−';
+            button.setAttribute('aria-expanded', 'true');
+        }
+    }
+}
+
 // Enhanced Event Handlers
 console.log('DOM fully loaded and parsed');
 
@@ -389,6 +400,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded event fired');
     // Set up real-time validation
     setupRealTimeValidation();
+    
+    // Set up event delegation for toggle buttons
+    setupToggleEventDelegation();
+    
     const analyzeBtn = document.getElementById('analyzeBtn');
     const placeholder = document.getElementById('placeholder');
     const analysisResults = document.getElementById('analysis-results');
