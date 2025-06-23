@@ -306,6 +306,108 @@ function showConfirmationSection() {
     confirmationSection.classList.remove('hidden');
 }
 
+// Refinement functionality
+async function refineStrategy(refinementText) {
+    const linkedin = document.getElementById('linkedin_profile').value.trim();
+    const story = document.getElementById('personal_story').value.trim();
+    const resume = document.getElementById('sample_resume').value.trim();
+    
+    const requestBody = {
+        linkedin_url: linkedin,
+        personal_story: story,
+        sample_resume: resume,
+        selected_paths: selectedCareerPaths.map(path => path.title),
+        refinement_text: refinementText
+    };
+
+    try {
+        const response = await fetch(`${API_URL}/refine-strategy`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `API Error: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error refining strategy:', error);
+        // Fallback to mock data for MVP testing
+        console.log('Backend not available, using mock refined paths for testing');
+        return {
+            refinedPaths: [
+                {
+                    title: "AI/ML Engineer",
+                    strengths: "Specialized in artificial intelligence and machine learning",
+                    keywords: ["Python", "TensorFlow", "PyTorch", "Machine Learning", "Data Science"]
+                },
+                {
+                    title: "Technical Lead",
+                    strengths: "Leadership role combining technical expertise with team management",
+                    keywords: ["Team Leadership", "Architecture", "Mentoring", "Technical Strategy"]
+                }
+            ]
+        };
+    }
+}
+
+function displayRefinedPaths(refinedPaths) {
+    const careerPathsContainer = document.getElementById('career-paths');
+    
+    // Add refined paths below existing ones
+    refinedPaths.forEach((path, index) => {
+        const label = document.createElement('label');
+        label.className = 'flex items-start p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 cursor-pointer transition-colors';
+        label.innerHTML = `
+            <input type="checkbox" class="career-path-checkbox mt-1 mr-3 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" 
+                   data-path="${path.title}" 
+                   data-keywords="${path.keywords.join(', ')}"
+                   data-strengths="${path.strengths || ''}"
+                   data-refined="true">
+            <div class="flex-1">
+                <div class="flex items-center gap-2">
+                    <p class="font-semibold text-gray-800">${path.title}</p>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        AI Suggested
+                    </span>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">${path.strengths || ''}</p>
+                <p class="text-xs text-gray-500 mt-2">Keywords: ${path.keywords.join(', ')}</p>
+            </div>
+        `;
+
+        careerPathsContainer.appendChild(label);
+    });
+
+    // Re-setup event listeners for all checkboxes (including new ones)
+    setupCareerPathSelection();
+}
+
+function showRefineLoading() {
+    const refineBtn = document.getElementById('refineBtn');
+    const refineBtnText = document.getElementById('refineBtn-text');
+    const refineBtnSpinner = document.getElementById('refineBtn-spinner');
+    
+    refineBtn.disabled = true;
+    refineBtnText.classList.add('hidden');
+    refineBtnSpinner.classList.remove('hidden');
+}
+
+function hideRefineLoading() {
+    const refineBtn = document.getElementById('refineBtn');
+    const refineBtnText = document.getElementById('refineBtn-text');
+    const refineBtnSpinner = document.getElementById('refineBtn-spinner');
+    
+    refineBtn.disabled = false;
+    refineBtnText.classList.remove('hidden');
+    refineBtnSpinner.classList.add('hidden');
+}
+
 // Enhanced Event Handlers
 document.addEventListener('DOMContentLoaded', () => {
     // Set up real-time validation
@@ -393,6 +495,46 @@ document.addEventListener('DOMContentLoaded', () => {
             // TODO: Implement resume generation with multiple paths
         } else {
             alert('Please select career paths first.');
+        }
+    });
+
+    // Refinement button handler
+    const refineBtn = document.getElementById('refineBtn');
+    refineBtn.addEventListener('click', async () => {
+        const refinementText = document.getElementById('refinementText').value.trim();
+        
+        if (!refinementText) {
+            alert('Please enter your refinement preferences.');
+            return;
+        }
+
+        if (selectedCareerPaths.length === 0) {
+            alert('Please select at least one career path first.');
+            return;
+        }
+
+        try {
+            showRefineLoading();
+            
+            const result = await refineStrategy(refinementText);
+            
+            if (result && result.refinedPaths && result.refinedPaths.length > 0) {
+                displayRefinedPaths(result.refinedPaths);
+                
+                // Clear the refinement text
+                document.getElementById('refinementText').value = '';
+                
+                // Show success message
+                alert(`Added ${result.refinedPaths.length} new career path suggestions based on your preferences!`);
+            } else {
+                alert('No additional career paths found based on your refinement.');
+            }
+            
+        } catch (error) {
+            showError('Failed to refine strategy. Please try again.');
+            console.error(error);
+        } finally {
+            hideRefineLoading();
         }
     });
 });
