@@ -252,17 +252,23 @@ function displayCareerPaths(newCareerPaths, append = false, refined = false) {
             return; // Skip duplicates
         }
         const label = document.createElement('label');
-        label.className = 'flex items-start p-4 rounded-lg border border-gray-200 cursor-pointer transition-colors ' + 
+        label.className = 'flex flex-col p-4 rounded-lg border border-gray-200 cursor-pointer transition-colors ' + 
             (refined ? 'bg-yellow-50 hover:bg-yellow-100 border-yellow-300' : 'bg-gray-100 hover:bg-indigo-50');
+
         label.innerHTML = `
-            <input type="checkbox" class="career-path-checkbox mt-1 mr-3 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" 
-                   data-path="${path.title}" 
-                   data-keywords="${path.keywords.join(', ')}"
-                   data-strengths="${path.strengths || ''}"
-                   data-index="${index}">
-            <div class="flex-1">
-                <p class="font-semibold text-gray-800">${path.title} ${refined ? '<span class="ml-2 inline-block bg-yellow-300 text-yellow-900 text-xs font-semibold px-2 py-0.5 rounded">Refined</span>' : ''}</p>
-                <p class="text-sm text-gray-600 mt-1">${path.strengths || ''}</p>
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <input type="checkbox" class="career-path-checkbox mt-1 mr-3 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" 
+                           data-path="${path.title}" 
+                           data-keywords="${path.keywords.join(', ')}"
+                           data-strengths="${path.strengths || ''}"
+                           data-index="${index}">
+                    <p class="font-semibold text-gray-800 mb-0">${path.title} ${refined ? '<span class="ml-2 inline-block bg-yellow-300 text-yellow-900 text-xs font-semibold px-2 py-0.5 rounded">Refined</span>' : ''}</p>
+                </div>
+                <button type="button" class="toggle-details text-indigo-600 font-bold focus:outline-none" aria-expanded="true" aria-label="Toggle details for ' + path.title + '">−</button>
+            </div>
+            <div class="career-path-details mt-2">
+                <p class="text-sm text-gray-600">${path.strengths || ''}</p>
                 <p class="text-xs text-gray-500 mt-2">Keywords: ${path.keywords.join(', ')}</p>
             </div>
         `;
@@ -272,6 +278,26 @@ function displayCareerPaths(newCareerPaths, append = false, refined = false) {
 
     // Set up event listeners for checkboxes
     setupCareerPathSelection();
+
+    // Set up toggle buttons for collapsible details
+    const toggleButtons = careerPathsContainer.querySelectorAll('.toggle-details');
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const label = button.closest('label');
+            const details = label.querySelector('.career-path-details');
+            const expanded = button.getAttribute('aria-expanded') === 'true';
+
+            if (expanded) {
+                details.classList.add('hidden');
+                button.textContent = '+';
+                button.setAttribute('aria-expanded', 'false');
+            } else {
+                details.classList.remove('hidden');
+                button.textContent = '−';
+                button.setAttribute('aria-expanded', 'true');
+            }
+        });
+    });
 }
 
 // MVP Multi-path selection logic
