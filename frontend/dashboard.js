@@ -313,16 +313,16 @@ function showConfirmationSection() {
     // Generate confirmation text for multiple paths
     let pathText;
     if (selectedCareerPaths.length === 1) {
-        pathText = `**${selectedCareerPaths[0].title}** roles`;
+        pathText = `<strong>${selectedCareerPaths[0].title}</strong> roles`;
     } else if (selectedCareerPaths.length === 2) {
-        pathText = `**${selectedCareerPaths[0].title}** and **${selectedCareerPaths[1].title}** roles`;
+        pathText = `<strong>${selectedCareerPaths[0].title}</strong> and <strong>${selectedCareerPaths[1].title}</strong> roles`;
     } else {
         const lastPath = selectedCareerPaths[selectedCareerPaths.length - 1];
         const otherPaths = selectedCareerPaths.slice(0, -1);
-        pathText = `**${otherPaths.map(p => p.title).join('**, **')}**, and **${lastPath.title}** roles`;
+        pathText = `<strong>${otherPaths.map(p => p.title).join('</strong>, <strong>')}</strong>, and <strong>${lastPath.title}</strong> roles`;
     }
     
-    confirmationText.textContent = `New plan: We are targeting ${pathText}. I will now tailor your resume and search for matching jobs across these career paths.`;
+    confirmationText.innerHTML = `New plan: We are targeting ${pathText}. I will now tailor your resume and search for matching jobs across these career paths.`;
     confirmationSection.classList.remove('hidden');
 }
 
@@ -343,6 +343,32 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             showLoading();
             
+            // Mock data for testing
+            const mockCareerPaths = {
+                careerPaths: [
+                    {
+                        title: "Technical Project Manager",
+                        strengths: "Strong leadership and technical background",
+                        keywords: ["Agile", "Team Leadership", "Scrum", "MERN Stack"]
+                    },
+                    {
+                        title: "Senior Front-End Engineer",
+                        strengths: "Deep expertise in modern web technologies",
+                        keywords: ["React", "TypeScript", "Performance", "CI/CD"]
+                    },
+                    {
+                        title: "Full-Stack Developer",
+                        strengths: "Versatile across frontend and backend",
+                        keywords: ["JavaScript", "Node.js", "Database Design", "API Development"]
+                    },
+                    {
+                        title: "DevOps Engineer",
+                        strengths: "Infrastructure and automation expertise",
+                        keywords: ["Docker", "Kubernetes", "AWS", "CI/CD Pipelines"]
+                    }
+                ]
+            };
+
             // Validate and call the AI Copilot Service
             let result;
             try {
@@ -350,59 +376,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 // Fallback to mock data for MVP testing when backend is not available
                 console.log('Backend not available, using mock data for MVP testing');
-                result = {
-                    careerPaths: [
-                        {
-                            title: "Technical Project Manager",
-                            strengths: "Strong leadership and technical background",
-                            keywords: ["Agile", "Team Leadership", "Scrum", "MERN Stack"]
-                        },
-                        {
-                            title: "Senior Front-End Engineer",
-                            strengths: "Deep expertise in modern web technologies",
-                            keywords: ["React", "TypeScript", "Performance", "CI/CD"]
-                        },
-                        {
-                            title: "Full-Stack Developer",
-                            strengths: "Versatile across frontend and backend",
-                            keywords: ["JavaScript", "Node.js", "Database Design", "API Development"]
-                        },
-                        {
-                            title: "DevOps Engineer",
-                            strengths: "Infrastructure and automation expertise",
-                            keywords: ["Docker", "Kubernetes", "AWS", "CI/CD Pipelines"]
-                        }
-                    ]
-                };
+                result = mockCareerPaths;
             }
             
             // If validation failed but we want to test with mock data anyway
             if (!result) {
                 console.log('Validation failed, using mock data for testing purposes');
-                result = {
-                    careerPaths: [
-                        {
-                            title: "Technical Project Manager",
-                            strengths: "Strong leadership and technical background",
-                            keywords: ["Agile", "Team Leadership", "Scrum", "MERN Stack"]
-                        },
-                        {
-                            title: "Senior Front-End Engineer",
-                            strengths: "Deep expertise in modern web technologies",
-                            keywords: ["React", "TypeScript", "Performance", "CI/CD"]
-                        },
-                        {
-                            title: "Full-Stack Developer",
-                            strengths: "Versatile across frontend and backend",
-                            keywords: ["JavaScript", "Node.js", "Database Design", "API Development"]
-                        },
-                        {
-                            title: "DevOps Engineer",
-                            strengths: "Infrastructure and automation expertise",
-                            keywords: ["Docker", "Kubernetes", "AWS", "CI/CD Pipelines"]
-                        }
-                    ]
-                };
+                result = mockCareerPaths;
             }
             
             // Hide placeholder, show results
@@ -463,38 +443,57 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             showRefineLoading();
             
-            const response = await fetch(`${API_URL}/refine`, {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+            const response = await fetch(`${API_URL}/refine-strategy`, {
+                signal: controller.signal,
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    refinement: refinementText,
-                    selectedPaths: selectedCareerPaths
+                    linkedin_url: document.getElementById('linkedin_profile').value.trim(),
+                    personal_story: document.getElementById('personal_story').value.trim(),
+                    sample_resume: document.getElementById('sample_resume').value.trim(),
+                    selected_paths: selectedCareerPaths.map(path => path.title),
+                    refinement_text: refinementText
                 })
             });
 
+            clearTimeout(timeoutId);
+            
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `API Error: ${response.status}`);
             }
 
             const result = await response.json();
             
-            // Update the confirmation text with the refined strategy
-            const confirmationText = document.querySelector('#ai-confirmation-section p');
-            confirmationText.textContent = result.message || 'Strategy refined successfully.';
-            
-            // Clear the input
-            refinementInput.value = '';
-            
-            // Show the confirmation section if it's hidden
-            document.getElementById('ai-confirmation-section').classList.remove('hidden');
+            // Display the new career paths
+            if (result.refinedPaths && result.refinedPaths.length > 0) {
+                // Display the new paths
+                displayCareerPaths(result.refinedPaths);
+                
+                // Update the confirmation text
+                const confirmationText = document.querySelector('#ai-confirmation-section p');
+                confirmationText.innerHTML = 'Based on your refinement, here are additional career paths that match your entrepreneurial background. Select any that interest you.';
+                
+                // Clear the refinement input
+                refinementInput.value = '';
+                
+                // Show the confirmation section
+                document.getElementById('ai-confirmation-section').classList.remove('hidden');
+            } else {
+                showError('No additional career paths found. Please try different refinement criteria.');
+            }
 
         } catch (error) {
             console.error('Error refining strategy:', error);
+            clearTimeout(timeoutId); // Clean up timeout
             // Fallback for MVP testing when backend is not available
             const confirmationText = document.querySelector('#ai-confirmation-section p');
-            confirmationText.textContent = `Refined plan: Focusing on ${selectedCareerPaths.map(p => `**${p.title}**`).join(' and ')} with emphasis on ${refinementText}`;
+            confirmationText.innerHTML = `Refined plan: Focusing on ${selectedCareerPaths.map(p => `<strong>${p.title}</strong>`).join(' and ')} with emphasis on ${refinementText}`;
             refinementInput.value = '';
             document.getElementById('ai-confirmation-section').classList.remove('hidden');
         } finally {
