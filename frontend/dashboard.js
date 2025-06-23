@@ -265,11 +265,11 @@ function displayCareerPaths(newCareerPaths, append = false, refined = false) {
                            data-index="${index}">
                     <p class="font-semibold text-gray-800 mb-0">${path.title} ${refined ? '<span class="ml-2 inline-block bg-yellow-300 text-yellow-900 text-xs font-semibold px-2 py-0.5 rounded">Refined</span>' : ''}</p>
                 </div>
-                <button type="button" class="toggle-details text-indigo-600 font-bold focus:outline-none" aria-expanded="true" aria-label="Toggle details for ' + path.title + '">−</button>
+                <button type="button" class="toggle-details w-6 h-6 cursor-pointer rounded-full hover:bg-gray-200 text-indigo-600 font-bold focus:outline-none" aria-expanded="true" aria-label="Toggle details for ${path.title}">−</button>
             </div>
             <div class="career-path-details mt-2">
-                <p class="text-sm text-gray-600">${path.strengths || ''}</p>
-                <p class="text-xs text-gray-500 mt-2">Keywords: ${path.keywords.join(', ')}</p>
+                <p class="text-[15px] leading-relaxed text-gray-600">${path.strengths || ''}</p>
+                <p class="text-[15px] leading-relaxed text-gray-500 mt-2">Keywords: ${path.keywords.join(', ')}</p>
             </div>
         `;
 
@@ -296,6 +296,23 @@ function displayCareerPaths(newCareerPaths, append = false, refined = false) {
                 button.textContent = '−';
                 button.setAttribute('aria-expanded', 'true');
             }
+        });
+    });
+
+    // Add subtle hover/focus feedback on card body or title section
+    const labels = careerPathsContainer.querySelectorAll('label');
+    labels.forEach(label => {
+        label.addEventListener('mouseenter', () => {
+            label.classList.add('shadow-md');
+        });
+        label.addEventListener('mouseleave', () => {
+            label.classList.remove('shadow-md');
+        });
+        label.addEventListener('focusin', () => {
+            label.classList.add('shadow-md');
+        });
+        label.addEventListener('focusout', () => {
+            label.classList.remove('shadow-md');
         });
     });
 }
