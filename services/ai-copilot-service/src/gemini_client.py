@@ -31,6 +31,9 @@ class CareerPath(BaseModel):
 class AnalysisResponse(BaseModel):
     careerPaths: List[CareerPath]
 
+class RefinementResponse(BaseModel):
+    refinedPaths: List[CareerPath]
+
 def construct_prompt(linkedin_url: str, personal_story: str, sample_resume: str) -> str:
     """Constructs the detailed prompt for the Gemini API."""
     
@@ -116,6 +119,79 @@ async def get_career_analysis(linkedin_url: str, personal_story: str, sample_res
         logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         raise
 
+def construct_refinement_prompt(linkedin_url: str, personal_story: str, sample_resume: str, selected_paths: List[str], refinement_text: str) -> str:
+    """Constructs the refinement prompt for the Gemini API."""
+    
+    selected_paths_str = ", ".join(selected_paths)
+    
+    prompt = f"""
+    You are an expert career strategist. A candidate has already selected these career paths: {selected_paths_str}
+
+    Now they want to refine their strategy with this additional input: "{refinement_text}"
+
+    **Candidate Information:**
+    1. **LinkedIn Profile:** {linkedin_url}
+    2. **Personal Story:** ```{personal_story}```
+    3. **Sample Resume:** ```{sample_resume}```
+    4. **Currently Selected Paths:** {selected_paths_str}
+    5. **Refinement Request:** {refinement_text}
+
+    **Your Task:**
+    Based on the refinement request, suggest 1-3 additional career paths that align with their preferences. These should be different from their current selections but complement their background.
+
+    **Response Format (JSON only):**
+    {{
+        "refinedPaths": [
+            {{
+                "title": "Career Path Title",
+                "strengths": "Why this path fits their background and refinement request",
+                "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+            }}
+        ]
+    }}
+
+    Return only valid JSON. No markdown formatting or extra text.
+    """
+    
+    return prompt
+
+async def get_strategy_refinement(linkedin_url: str, personal_story: str, sample_resume: str, selected_paths: List[str], refinement_text: str) -> Dict[str, Any]:
+    """
+    Calls the Gemini API to get refined career path suggestions based on user input.
+    """
+    if not model:
+        raise ConnectionError("Gemini API client is not configured. Check your API key.")
+
+    try:
+        prompt = construct_refinement_prompt(linkedin_url, personal_story, sample_resume, selected_paths, refinement_text)
+        logger.info("Sending refinement prompt to Gemini API...")
+        
+        response = await model.generate_content_async(prompt)
+        response_text = response.text
+        
+        # Clean the response to ensure it's valid JSON
+        cleaned_response = response_text.strip().replace("```json", "").replace("```", "").strip()
+        
+        logger.info("Received refinement response from Gemini API. Parsing JSON...")
+        
+        # Parse the JSON response
+        refinement_data = json.loads(cleaned_response)
+        
+        # Validate the data with Pydantic
+        validated_data = RefinementResponse(**refinement_data)
+        
+        logger.info("Successfully parsed and validated AI refinement response.")
+        return validated_data.dict()
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse JSON from AI refinement response: {e}")
+        logger.error(f"Raw response was: {response_text}")
+        raise ValueError("The AI returned an invalid JSON response.")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during refinement: {e}", exc_info=True)
+        raise
+
+# Simple refinement function for basic strategy updates
 async def get_refined_strategy(refinement: str, selected_paths: List[Dict[str, Any]]) -> str:
     """
     Gets a refined career strategy from the Gemini API based on user feedback.

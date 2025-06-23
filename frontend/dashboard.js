@@ -214,6 +214,26 @@ function showError(message) {
     alert(message); // You might want to replace this with a better error UI
 }
 
+function showRefineLoading() {
+    const refineBtn = document.getElementById('refineBtn');
+    const refineBtnText = document.getElementById('refineBtn-text');
+    const refineBtnSpinner = document.getElementById('refineBtn-spinner');
+    
+    refineBtn.disabled = true;
+    refineBtnText.classList.add('hidden');
+    refineBtnSpinner.classList.remove('hidden');
+}
+
+function hideRefineLoading() {
+    const refineBtn = document.getElementById('refineBtn');
+    const refineBtnText = document.getElementById('refineBtn-text');
+    const refineBtnSpinner = document.getElementById('refineBtn-spinner');
+    
+    refineBtn.disabled = false;
+    refineBtnText.classList.remove('hidden');
+    refineBtnSpinner.classList.add('hidden');
+}
+
 function displayCareerPaths(careerPaths) {
     const careerPathsContainer = document.getElementById('career-paths');
     careerPathsContainer.innerHTML = ''; // Clear existing paths
@@ -396,23 +416,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Add refinement button handler
+    // Refinement button handler - using correct ID from HTML
     const refineBtn = document.getElementById('refineBtn');
-    const refinementInput = document.getElementById('user-refinement');
+    const refinementInput = document.getElementById('refinementText'); // This matches the HTML
     
     refineBtn.addEventListener('click', async () => {
-        if (selectedCareerPaths.length === 0) {
-            showError('Please select at least one career path first');
+        const refinementText = refinementInput.value.trim();
+        
+        if (!refinementText) {
+            showError('Please enter your refinement preferences.');
             return;
         }
 
-        const refinementText = refinementInput.value.trim();
-        if (!refinementText) {
-            showError('Please enter your refinement strategy');
+        if (selectedCareerPaths.length === 0) {
+            showError('Please select at least one career path first.');
             return;
         }
 
         try {
+            showRefineLoading();
+            
             const response = await fetch(`${API_URL}/refine`, {
                 method: 'POST',
                 headers: {
@@ -447,6 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmationText.textContent = `Refined plan: Focusing on ${selectedCareerPaths.map(p => `**${p.title}**`).join(' and ')} with emphasis on ${refinementText}`;
             refinementInput.value = '';
             document.getElementById('ai-confirmation-section').classList.remove('hidden');
+        } finally {
+            hideRefineLoading();
         }
     });
 });
