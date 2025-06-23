@@ -4,8 +4,8 @@ from typing import Dict, Any
 import os
 import re
 
-# Import our Gemini client function
-from .gemini_client import get_career_analysis
+# Import our Gemini client functions
+from .gemini_client import get_career_analysis, get_strategy_refinement
 
 # For handling requests from our front-end
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,6 +52,54 @@ class AnalysisRequest(BaseModel):
             raise ValueError('Must be a valid LinkedIn profile URL (e.g., https://linkedin.com/in/username)')
         return v
 
+class RefineStrategyRequest(BaseModel):
+    linkedin_url: HttpUrl
+    personal_story: str
+    sample_resume: str
+    selected_paths: list[str]
+    refinement_text: str
+
+    @validator('personal_story')
+    def validate_story_length(cls, v):
+        words = len(v.split())
+        if words < MIN_STORY_WORDS:
+            raise ValueError(f'Personal story must be at least {MIN_STORY_WORDS} words')
+        if words > MAX_STORY_WORDS:
+            raise ValueError(f'Personal story must not exceed {MAX_STORY_WORDS} words')
+        if v.strip() == '':
+            raise ValueError('Personal story cannot be empty or just whitespace')
+        return v
+
+    @validator('sample_resume')
+    def validate_resume_length(cls, v):
+        words = len(v.split())
+        if words < MIN_RESUME_WORDS:
+            raise ValueError(f'Resume must be at least {MIN_RESUME_WORDS} words')
+        if words > MAX_RESUME_WORDS:
+            raise ValueError(f'Resume must not exceed {MAX_RESUME_WORDS} words')
+        if v.strip() == '':
+            raise ValueError('Sample resume cannot be empty or just whitespace')
+        return v
+
+    @validator('linkedin_url')
+    def validate_linkedin_url(cls, v):
+        url_str = str(v)
+        if not re.match(LINKEDIN_URL_PATTERN, url_str):
+            raise ValueError('Must be a valid LinkedIn profile URL (e.g., https://linkedin.com/in/username)')
+        return v
+
+    @validator('selected_paths')
+    def validate_selected_paths(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError('At least one career path must be selected')
+        return v
+
+    @validator('refinement_text')
+    def validate_refinement_text(cls, v):
+        if not v or v.strip() == '':
+            raise ValueError('Refinement text cannot be empty')
+        return v
+
 # --- FastAPI Application Instance ---
 app = FastAPI(
     title="AI Career Co-Pilot Service",
@@ -95,6 +143,32 @@ async def analyze_career(request: AnalysisRequest) -> Dict[str, Any]:
             sample_resume=request.sample_resume
         )
         return analysis_result
+    except ConnectionError as e:
+        raise HTTPException(status_code=503, detail=f"AI Service Error: {e}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Data Error: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
+
+@app.post(
+    "/refine-strategy",
+    summary="Refine career strategy based on user preferences",
+    response_description="A JSON object with refined career path suggestions",
+    tags=["Analysis"]
+)
+async def refine_strategy(request: RefineStrategyRequest) -> Dict[str, Any]:
+    """
+    Receives user refinement preferences and returns additional career path suggestions.
+    """
+    try:
+        refinement_result = await get_strategy_refinement(
+            linkedin_url=str(request.linkedin_url),
+            personal_story=request.personal_story,
+            sample_resume=request.sample_resume,
+            selected_paths=request.selected_paths,
+            refinement_text=request.refinement_text
+        )
+        return refinement_result
     except ConnectionError as e:
         raise HTTPException(status_code=503, detail=f"AI Service Error: {e}")
     except ValueError as e:
