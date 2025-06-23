@@ -1,11 +1,11 @@
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, HttpUrl, validator, constr
-from typing import Dict, Any
+from typing import Dict, Any, List
 import os
 import re
 
 # Import our Gemini client function
-from .gemini_client import get_career_analysis
+from .gemini_client import get_career_analysis, get_refined_strategy
 
 # For handling requests from our front-end
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +17,7 @@ MIN_RESUME_WORDS = 100  # About one page minimum
 MAX_RESUME_WORDS = 2000  # About 4 pages maximum
 LINKEDIN_URL_PATTERN = r'^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+\/?$'
 
-# --- Pydantic Model for Incoming Request Data ---
+# --- Pydantic Models for Incoming Request Data ---
 class AnalysisRequest(BaseModel):
     linkedin_url: HttpUrl
     personal_story: str
@@ -52,6 +52,27 @@ class AnalysisRequest(BaseModel):
             raise ValueError('Must be a valid LinkedIn profile URL (e.g., https://linkedin.com/in/username)')
         return v
 
+class CareerPath(BaseModel):
+    title: str
+    keywords: List[str]
+    strengths: str = ""
+
+class RefinementRequest(BaseModel):
+    refinement: str
+    selectedPaths: List[CareerPath]
+
+    @validator('refinement')
+    def validate_refinement(cls, v):
+        if not v.strip():
+            raise ValueError('Refinement text cannot be empty')
+        return v.strip()
+
+    @validator('selectedPaths')
+    def validate_selected_paths(cls, v):
+        if not v:
+            raise ValueError('Must select at least one career path')
+        return v
+
 # --- FastAPI Application Instance ---
 app = FastAPI(
     title="AI Career Co-Pilot Service",
@@ -69,7 +90,6 @@ app.add_middleware(
     allow_methods=["*"], # Allow all methods
     allow_headers=["*"], # Allow all headers
 )
-
 
 # --- API Endpoints ---
 @app.get("/health", tags=["Health"])
@@ -95,6 +115,34 @@ async def analyze_career(request: AnalysisRequest) -> Dict[str, Any]:
             sample_resume=request.sample_resume
         )
         return analysis_result
+    except ConnectionError as e:
+        raise HTTPException(status_code=503, detail=f"AI Service Error: {e}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Data Error: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
+
+@app.post(
+    "/refine",
+    summary="Refine career strategy based on user feedback",
+    response_description="A JSON object with refined career strategy",
+    tags=["Analysis"]
+)
+async def refine_strategy(request: RefinementRequest) -> Dict[str, Any]:
+    """
+    Receives refinement text and selected career paths,
+    gets refined analysis from the Gemini API.
+    """
+    try:
+        # Get refined strategy from Gemini
+        refined_result = await get_refined_strategy(
+            refinement=request.refinement,
+            selected_paths=request.selectedPaths
+        )
+        return {
+            "message": refined_result,
+            "success": True
+        }
     except ConnectionError as e:
         raise HTTPException(status_code=503, detail=f"AI Service Error: {e}")
     except ValueError as e:

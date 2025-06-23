@@ -395,4 +395,58 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Please select career paths first.');
         }
     });
+
+    // Add refinement button handler
+    const refineBtn = document.getElementById('refineBtn');
+    const refinementInput = document.getElementById('user-refinement');
+    
+    refineBtn.addEventListener('click', async () => {
+        if (selectedCareerPaths.length === 0) {
+            showError('Please select at least one career path first');
+            return;
+        }
+
+        const refinementText = refinementInput.value.trim();
+        if (!refinementText) {
+            showError('Please enter your refinement strategy');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/refine`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    refinement: refinementText,
+                    selectedPaths: selectedCareerPaths
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            // Update the confirmation text with the refined strategy
+            const confirmationText = document.querySelector('#ai-confirmation-section p');
+            confirmationText.textContent = result.message || 'Strategy refined successfully.';
+            
+            // Clear the input
+            refinementInput.value = '';
+            
+            // Show the confirmation section if it's hidden
+            document.getElementById('ai-confirmation-section').classList.remove('hidden');
+
+        } catch (error) {
+            console.error('Error refining strategy:', error);
+            // Fallback for MVP testing when backend is not available
+            const confirmationText = document.querySelector('#ai-confirmation-section p');
+            confirmationText.textContent = `Refined plan: Focusing on ${selectedCareerPaths.map(p => `**${p.title}**`).join(' and ')} with emphasis on ${refinementText}`;
+            refinementInput.value = '';
+            document.getElementById('ai-confirmation-section').classList.remove('hidden');
+        }
+    });
 });
