@@ -192,7 +192,7 @@ async def get_strategy_refinement(linkedin_url: str, personal_story: str, sample
         raise
 
 # Simple refinement function for basic strategy updates
-async def get_refined_strategy(refinement: str, selected_paths: List[Dict[str, Any]]) -> str:
+async def get_refined_strategy(refinement: str, selected_paths: List[CareerPath]) -> str:
     """
     Gets a refined career strategy from the Gemini API based on user feedback.
     Returns a refined strategy message.
@@ -202,7 +202,7 @@ async def get_refined_strategy(refinement: str, selected_paths: List[Dict[str, A
 
     try:
         # Construct the refinement prompt
-        paths_text = ", ".join([path.get('title', '') for path in selected_paths])
+        paths_text = ", ".join([path.title for path in selected_paths])
         
         prompt = f"""
         You are an expert career strategist. The user has selected these career paths: {paths_text}

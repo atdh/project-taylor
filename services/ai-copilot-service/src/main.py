@@ -77,7 +77,7 @@ class RefineStrategyRequest(BaseModel):
     linkedin_url: HttpUrl
     personal_story: str
     sample_resume: str
-    selected_paths: list[str]
+    selected_paths: List[str]
     refinement_text: str
 
     @validator('personal_story')
