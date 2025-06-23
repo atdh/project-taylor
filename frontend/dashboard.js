@@ -234,13 +234,26 @@ function hideRefineLoading() {
     refineBtnSpinner.classList.add('hidden');
 }
 
-function displayCareerPaths(careerPaths) {
+function displayCareerPaths(newCareerPaths, append = false, refined = false) {
     const careerPathsContainer = document.getElementById('career-paths');
-    careerPathsContainer.innerHTML = ''; // Clear existing paths
+    if (!append) {
+        careerPathsContainer.innerHTML = ''; // Clear existing paths if not appending
+    }
 
-    careerPaths.forEach((path, index) => {
+    // Get existing paths titles to avoid duplicates
+    const existingTitles = new Set();
+    const existingCheckboxes = document.querySelectorAll('.career-path-checkbox');
+    existingCheckboxes.forEach(cb => {
+        existingTitles.add(cb.dataset.path);
+    });
+
+    newCareerPaths.forEach((path, index) => {
+        if (existingTitles.has(path.title)) {
+            return; // Skip duplicates
+        }
         const label = document.createElement('label');
-        label.className = 'flex items-start p-4 bg-gray-100 hover:bg-indigo-50 rounded-lg border border-gray-200 cursor-pointer transition-colors';
+        label.className = 'flex items-start p-4 rounded-lg border border-gray-200 cursor-pointer transition-colors ' + 
+            (refined ? 'bg-yellow-50 hover:bg-yellow-100 border-yellow-300' : 'bg-gray-100 hover:bg-indigo-50');
         label.innerHTML = `
             <input type="checkbox" class="career-path-checkbox mt-1 mr-3 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" 
                    data-path="${path.title}" 
@@ -248,7 +261,7 @@ function displayCareerPaths(careerPaths) {
                    data-strengths="${path.strengths || ''}"
                    data-index="${index}">
             <div class="flex-1">
-                <p class="font-semibold text-gray-800">${path.title}</p>
+                <p class="font-semibold text-gray-800">${path.title} ${refined ? '<span class="ml-2 inline-block bg-yellow-300 text-yellow-900 text-xs font-semibold px-2 py-0.5 rounded">Refined</span>' : ''}</p>
                 <p class="text-sm text-gray-600 mt-1">${path.strengths || ''}</p>
                 <p class="text-xs text-gray-500 mt-2">Keywords: ${path.keywords.join(', ')}</p>
             </div>
@@ -327,7 +340,10 @@ function showConfirmationSection() {
 }
 
 // Enhanced Event Handlers
+console.log('DOM fully loaded and parsed');
+
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded event fired');
     // Set up real-time validation
     setupRealTimeValidation();
     const analyzeBtn = document.getElementById('analyzeBtn');
@@ -426,8 +442,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Refinement button handler - using correct ID from HTML
     const refineBtn = document.getElementById('refineBtn');
     const refinementInput = document.getElementById('refinementText'); // This matches the HTML
+
+    console.log('refineBtn:', refineBtn);
+    console.log('refinementInput:', refinementInput);
     
     refineBtn.addEventListener('click', async () => {
+        console.log('refineBtn clicked');
         const refinementText = refinementInput.value.trim();
         
         if (!refinementText) {
@@ -470,10 +490,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const result = await response.json();
             
-            // Display the new career paths
+            // Display the new career paths, appending to existing ones
             if (result.refinedPaths && result.refinedPaths.length > 0) {
-                // Display the new paths
-                displayCareerPaths(result.refinedPaths);
+                // Append new paths instead of replacing, mark as refined
+                displayCareerPaths(result.refinedPaths, true, true);
                 
                 // Update the confirmation text
                 const confirmationText = document.querySelector('#ai-confirmation-section p');
