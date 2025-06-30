@@ -1,164 +1,237 @@
-# Job Scraper Service
+# AI-Driven Job Scraper Service
 
-> An MCP-compliant service that fetches job listings from multiple sources (Apify, Firecrawl) and standardizes the output format.
+An intelligent job search service that uses Google Gemini AI to plan and execute optimal job search strategies across multiple career paths.
 
-## Table of Contents
-- [MCP Interface](#mcp-interface)
-- [Features](#features)
-- [Quick Start](#quick-start)
-- [Documentation](#documentation)
-- [Development](#development)
-- [Operations](#operations)
+## Features
 
-## MCP Interface
+- **AI-Powered Search Planning**: Uses Google Gemini to analyze career paths and determine the best search strategy for each
+- **Multi-Source Job Search**: Integrates with USAJobs, GitHub Jobs, Serper API, and fallback mock data
+- **Cost-Aware Execution**: Tracks API costs and stays within budget limits
+- **Smart Deduplication**: Removes duplicate jobs across different sources
+- **Async Processing**: Concurrent job searches for optimal performance
+- **Comprehensive Logging**: Detailed logging for monitoring and debugging
 
-### Input Schema
+## Architecture
+
+### Core Components
+
+1. **Planner (`planner.py`)**: Uses Gemini AI to create optimal search strategies
+2. **Executor (`executor.py`)**: Executes job searches based on AI-generated plans
+3. **Job Distributor (`job_distributor.py`)**: Handles job allocation and deduplication
+4. **API (`api/main.py`)**: FastAPI endpoints for job search and webhook handling
+
+### AI Planning Process
+
+1. Analyzes career paths and keywords
+2. Evaluates available job sources (USAJobs, GitHub, Serper, etc.)
+3. Considers cost constraints and API limits
+4. Generates optimized search strategies with backup plans
+5. Prioritizes searches based on effectiveness and cost
+
+## API Endpoints
+
+### Job Search
+```
+POST /api/search-jobs
+```
+
+Search for jobs across multiple career paths using AI-driven strategies.
+
+**Request Body:**
 ```json
 {
-  "source": "apify",          // or "firecrawl"
-  "search_term": "python developer",
+  "career_paths": [
+    {
+      "id": "se-001",
+      "title": "Software Engineer",
+      "keywords": ["python", "javascript", "backend"]
+    }
+  ],
+  "total_jobs_requested": 100,
   "location": "remote",
   "filters": {
-    "experience": "mid",      // entry, mid, senior
-    "posted_within": "7d"     // 1d, 7d, 30d
-  },
-  "limit": 50                 // 1-100
+    "experience_level": "senior"
+  }
 }
 ```
 
-### Output Schema
+**Response:**
 ```json
 {
-  "jobs": [
-    {
-      "title": "Software Engineer",
-      "company": "Example Corp",
-      "location": "Remote",
-      "description": "<html>...",
-      "url": "https://...",
-      "posted_date": "2024-01-01T00:00:00Z",
-      "salary_range": {
-        "min": 80000,
-        "max": 120000,
-        "currency": "USD"
-      },
-      "source": "apify"
+  "allocation_summary": {
+    "Software Engineer": {
+      "requested": 50,
+      "found": 45
     }
-  ],
-  "metadata": {
-    "source": "apify",
-    "total_results": 1,
-    "search_term": "python developer",
-    "location": "remote",
-    "filters_applied": {
-      "experience": "mid",
-      "posted_within": "7d"
+  },
+  "jobs_by_path": {
+    "Software Engineer": [
+      {
+        "title": "Senior Software Engineer",
+        "company": "TechCorp",
+        "location": "Remote",
+        "description": "...",
+        "url": "https://example.com/job",
+        "source": "github_jobs"
+      }
+    ]
+  },
+  "total_jobs_found": 45,
+  "search_metadata": {
+    "search_strategy": "ai_driven",
+    "total_cost": 0.05,
+    "search_plan": {
+      "Software Engineer": {
+        "source": "github_jobs",
+        "method": "api",
+        "cost_estimate": 0.0,
+        "priority": 1
+      }
     }
   }
 }
 ```
 
-## Features
+### Webhook
+```
+POST /webhook/new-job
+```
 
-- ✨ MCP-compliant input/output interface
-- 🔄 Multiple job source support (Apify, Firecrawl)
-- 📋 Standardized job data format
-- 🎯 Configurable filters and search parameters
-- 🛡️ Error handling and logging
-- ⚡ Rate limiting and caching support
+Receive job data from external scrapers.
 
-## Quick Start
+### Health Check
+```
+GET /health
+```
 
-1. Clone the repository and navigate to the service directory:
+Service health status.
+
+## Environment Variables
+
+```bash
+# Required for AI planning
+GEMINI_API_KEY=your_gemini_api_key
+
+# Optional job sources
+USAJOBS_API_KEY=your_usajobs_key
+GITHUB_TOKEN=your_github_token
+SERPER_API_KEY=your_serper_key
+
+# Database (if using real database)
+DATABASE_URL=your_database_url
+```
+
+## Job Sources
+
+### 1. USAJobs API (Free)
+- Best for: Government positions
+- Cost: Free
+- Rate limits: Standard government API limits
+
+### 2. GitHub Jobs API (Free)
+- Best for: Tech positions
+- Cost: Free
+- Rate limits: GitHub API limits
+
+### 3. Serper API (Paid)
+- Best for: General job boards via Google search
+- Cost: $0.01 per search
+- Rate limits: Based on subscription
+
+### 4. Mock Data (Fallback)
+- Best for: Testing and development
+- Cost: Free
+- Always available
+
+## AI Strategy Examples
+
+The AI planner considers various factors when creating search strategies:
+
+### Example 1: Tech Role
+```json
+{
+  "career_path": "Software Engineer",
+  "strategy": {
+    "source": "github_jobs",
+    "method": "api",
+    "query": "software engineer python javascript",
+    "cost_estimate": 0.0,
+    "priority": 1,
+    "backup_strategy": {
+      "source": "serper",
+      "query": "software engineer jobs python"
+    }
+  }
+}
+```
+
+### Example 2: Government Role
+```json
+{
+  "career_path": "Policy Analyst",
+  "strategy": {
+    "source": "usajobs",
+    "method": "api",
+    "query": "policy analyst",
+    "cost_estimate": 0.0,
+    "priority": 1,
+    "backup_strategy": {
+      "source": "serper",
+      "query": "government policy analyst jobs"
+    }
+  }
+}
+```
+
+## Running the Service
+
+### Development
 ```bash
 cd services/job-scraper-service
+python -m uvicorn src.api.main:app --reload --port 8001
 ```
 
-2. Create and activate a virtual environment:
+### Production
 ```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
-
-# Linux/macOS
-python3 -m venv venv
-source venv/bin/activate
+cd services/job-scraper-service
+python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8001
 ```
 
-3. Install dependencies:
+### Testing
 ```bash
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+cd services/job-scraper-service
+pytest tests/ -v
 ```
 
-4. Configure environment:
-```bash
-# Windows
-copy .env.example .env
+## Cost Management
 
-# Linux/macOS
-cp .env.example .env
+The service includes built-in cost management:
 
-# Edit .env with your API keys and settings
-```
+- **Budget Limit**: Hard limit of $0.20 per search session
+- **Cost Tracking**: Real-time tracking of API costs
+- **Fallback Strategy**: Automatic fallback to free sources when budget is exceeded
+- **Cost Estimation**: AI provides cost estimates before execution
 
-5. Run the development server:
-```bash
-python run.py
-```
+## Error Handling
 
-The server will start at http://localhost:8001 with hot reload enabled.
+- **API Failures**: Automatic fallback to backup strategies
+- **Rate Limiting**: Respects API rate limits with exponential backoff
+- **Invalid Responses**: Graceful handling of malformed API responses
+- **Network Issues**: Retry logic with circuit breaker pattern
 
-For detailed setup instructions, environment configuration, and advanced usage, see [SETUP_AND_RUN.md](SETUP_AND_RUN.md).
+## Monitoring
 
-## Documentation
+The service provides comprehensive logging:
 
-### Architecture
-The service is structured as follows:
-```
-job-scraper-service/
-├── src/
-│   ├── api/            # FastAPI application
-│   ├── scraper/       # Job source clients
-│   └── db_client.py   # Database operations
-├── tests/            # Test suite
-├── run.py           # Development server runner
-└── requirements.txt # Dependencies
-```
+- **Search Planning**: AI decision-making process
+- **Execution Results**: Success/failure rates by source
+- **Cost Tracking**: Real-time cost monitoring
+- **Performance Metrics**: Response times and throughput
 
-### Dependencies
-- Python 3.10+
-- FastAPI for the REST API
-- Supabase for data storage
-- common_utils package (from project root)
-- Job source APIs (Apify, Firecrawl)
+## Future Enhancements
 
-## Development
-
-### Adding New Job Sources
-
-1. Create new client in `src/scraper/`
-2. Implement standardized job format
-3. Add source to `main.py` router
-4. Update documentation
-
-### Running Tests
-```bash
-# From job-scraper-service directory
-cd services/job-scraper-service; venv/Scripts/activate; python -m dotenv run -- pytest tests/
-
-See [SETUP_AND_RUN.md](SETUP_AND_RUN.md) for detailed testing instructions.
-
-## Operations
-
-### Monitoring
-- 📝 Logs in JSON format
-- 📊 Prometheus metrics (optional)
-- 📈 Rate limit tracking
-- ⚠️ Error reporting
-
-### Security
-- 🔑 API key validation
-- 🚦 Rate limiting
-- ✅ Input validation
-- 🔒 Error sanitization
+- **Machine Learning**: Learn from successful search patterns
+- **Dynamic Pricing**: Adjust strategies based on real-time API costs
+- **Custom Sources**: Easy integration of new job sources
+- **Caching**: Cache results to reduce API calls
+- **Analytics**: Advanced analytics on job market trends

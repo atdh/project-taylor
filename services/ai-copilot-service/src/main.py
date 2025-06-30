@@ -1,14 +1,17 @@
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, HttpUrl, validator, constr
+from pydantic import BaseModel, HttpUrl, field_validator, constr
 from typing import Dict, Any, List
 import os
 import re
+import logging
 
 # Import our Gemini client functions
 from .gemini_client import get_career_analysis, get_strategy_refinement, get_refined_strategy
 
 # For handling requests from our front-end
 from fastapi.middleware.cors import CORSMiddleware
+
+logger = logging.getLogger(__name__)
 
 # --- Validation Constants ---
 MIN_STORY_WORDS = 50  # About 2-3 paragraphs minimum
@@ -23,7 +26,8 @@ class AnalysisRequest(BaseModel):
     personal_story: str
     sample_resume: str
 
-    @validator('personal_story')
+    @field_validator('personal_story')
+    @classmethod
     def validate_story_length(cls, v):
         words = len(v.split())
         if words < MIN_STORY_WORDS:
@@ -34,7 +38,8 @@ class AnalysisRequest(BaseModel):
             raise ValueError('Personal story cannot be empty or just whitespace')
         return v
 
-    @validator('sample_resume')
+    @field_validator('sample_resume')
+    @classmethod
     def validate_resume_length(cls, v):
         words = len(v.split())
         if words < MIN_RESUME_WORDS:
@@ -45,7 +50,8 @@ class AnalysisRequest(BaseModel):
             raise ValueError('Sample resume cannot be empty or just whitespace')
         return v
 
-    @validator('linkedin_url')
+    @field_validator('linkedin_url')
+    @classmethod
     def validate_linkedin_url(cls, v):
         url_str = str(v)
         if not re.match(LINKEDIN_URL_PATTERN, url_str):
@@ -57,22 +63,6 @@ class CareerPath(BaseModel):
     keywords: List[str]
     strengths: str = ""
 
-class RefinementRequest(BaseModel):
-    refinement: str
-    selectedPaths: List[CareerPath]
-
-    @validator('refinement')
-    def validate_refinement(cls, v):
-        if not v.strip():
-            raise ValueError('Refinement text cannot be empty')
-        return v.strip()
-
-    @validator('selectedPaths')
-    def validate_selected_paths(cls, v):
-        if not v:
-            raise ValueError('Must select at least one career path')
-        return v
-
 class RefineStrategyRequest(BaseModel):
     linkedin_url: HttpUrl
     personal_story: str
@@ -80,46 +70,47 @@ class RefineStrategyRequest(BaseModel):
     selected_paths: List[str]
     refinement_text: str
 
-    @validator('personal_story')
+    @field_validator('personal_story')
+    @classmethod
     def validate_story_length(cls, v):
         words = len(v.split())
         if words < MIN_STORY_WORDS:
             raise ValueError(f'Personal story must be at least {MIN_STORY_WORDS} words')
         if words > MAX_STORY_WORDS:
             raise ValueError(f'Personal story must not exceed {MAX_STORY_WORDS} words')
-        if v.strip() == '':
-            raise ValueError('Personal story cannot be empty or just whitespace')
         return v
 
-    @validator('sample_resume')
+    @field_validator('sample_resume')
+    @classmethod
     def validate_resume_length(cls, v):
         words = len(v.split())
         if words < MIN_RESUME_WORDS:
             raise ValueError(f'Resume must be at least {MIN_RESUME_WORDS} words')
         if words > MAX_RESUME_WORDS:
             raise ValueError(f'Resume must not exceed {MAX_RESUME_WORDS} words')
-        if v.strip() == '':
-            raise ValueError('Sample resume cannot be empty or just whitespace')
         return v
 
-    @validator('linkedin_url')
+    @field_validator('linkedin_url')
+    @classmethod
     def validate_linkedin_url(cls, v):
         url_str = str(v)
         if not re.match(LINKEDIN_URL_PATTERN, url_str):
             raise ValueError('Must be a valid LinkedIn profile URL (e.g., https://linkedin.com/in/username)')
         return v
 
-    @validator('selected_paths')
+    @field_validator('selected_paths')
+    @classmethod
     def validate_selected_paths(cls, v):
         if not v or len(v) == 0:
             raise ValueError('At least one career path must be selected')
         return v
 
-    @validator('refinement_text')
+    @field_validator('refinement_text')
+    @classmethod
     def validate_refinement_text(cls, v):
         if not v or v.strip() == '':
             raise ValueError('Refinement text cannot be empty')
-        return v
+        return v.strip()
 
 # --- FastAPI Application Instance ---
 app = FastAPI(
@@ -129,11 +120,16 @@ app = FastAPI(
 )
 
 # --- CORS Middleware ---
-# This is crucial to allow our HTML dashboard (running on localhost:8000)
+# This is crucial to allow our HTML dashboard (running on localhost:8000 or as file://)
 # to make requests to this backend service (running on localhost:8002).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"], # The origin of your frontend
+    allow_origins=[
+        "http://localhost:8000", 
+        "http://127.0.0.1:8000",
+        "null",  # For file:// protocol
+        "*"  # Allow all origins for development
+    ],
     allow_credentials=True,
     allow_methods=["*"], # Allow all methods
     allow_headers=["*"], # Allow all headers
@@ -169,38 +165,6 @@ async def analyze_career(request: AnalysisRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=f"Data Error: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
-
-@app.post(
-    "/refine",
-    summary="Refine career strategy based on user feedback",
-    response_description="A JSON object with refined career strategy",
-    tags=["Analysis"]
-)
-async def refine_strategy(request: RefinementRequest) -> Dict[str, Any]:
-    """
-    Receives refinement text and selected career paths,
-    gets refined analysis from the Gemini API.
-    """
-    try:
-        # Get refined strategy from Gemini
-        refined_result = await get_refined_strategy(
-            refinement=request.refinement,
-            selected_paths=request.selectedPaths
-        )
-        return {
-            "message": refined_result,
-            "success": True
-        }
-    except ConnectionError as e:
-        raise HTTPException(status_code=503, detail=f"AI Service Error: {e}")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Data Error: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 @app.post(
     "/refine-strategy",

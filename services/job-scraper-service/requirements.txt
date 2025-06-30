@@ -1,23 +1,28 @@
-# requirements.txt - Runtime Dependencies
+# Core dependencies
+fastapi>=0.104.1
+uvicorn>=0.24.0
+pydantic>=2.5.2
+python-dotenv>=1.0.0
+aiohttp>=3.9.1
 
-# Web Framework
-fastapi>=0.100.0,<0.112.0
-pydantic>=2.4.2,<3.0.0
+# AI/ML
+google-generativeai>=0.3.1
 
-# ASGI Server
-uvicorn[standard]>=0.20.0,<0.30.0
+# Testing
+pytest>=7.4.3
+pytest-asyncio>=0.23.2
+httpx>=0.25.2  # For FastAPI TestClient
+pytest-cov>=4.1.0
 
-# HTTP Clients (Review if all are needed)
-httpx>=0.25.0,<0.28.0
-requests==2.31.0 # Pinned version, confirm if needed
-aiohttp # Allow pip to choose version compatible with supabase/realtime
+# Logging and monitoring
+structlog>=23.2.0
 
-# External Service Clients
-apify-client==1.4.1 # Or firecrawl client if used
-# firecrawl-py==...
+# Database
+motor>=3.3.2  # Async MongoDB driver
+pymongo>=4.6.1
+supabase>=2.3.1  # Supabase client
 
-# Database / Backend Clients
-supabase==2.15.0
-
-# Logging and Monitoring
-python-json-logger==2.0.7
+# Common utilities
+python-dateutil>=2.8.2
+tenacity>=8.2.3  # For retries
+python-json-logger>=2.0.7  # For structured logging

@@ -22,7 +22,6 @@ except Exception as e:
     model = None
 
 # --- Pydantic Models for Structured Output ---
-# This helps ensure the AI returns data in the format we expect.
 class CareerPath(BaseModel):
     title: str
     strengths: str
@@ -34,10 +33,55 @@ class AnalysisResponse(BaseModel):
 class RefinementResponse(BaseModel):
     refinedPaths: List[CareerPath]
 
+# --- Mock Data Functions ---
+def _get_mock_career_analysis() -> Dict[str, Any]:
+    """Generate mock career analysis data"""
+    return {
+        "careerPaths": [
+            {
+                "title": "Senior Full Stack Developer",
+                "strengths": "Strong technical background with proven experience in both frontend and backend development",
+                "keywords": ["React", "Node.js", "Python", "System Design", "API Development"]
+            },
+            {
+                "title": "Technical Lead",
+                "strengths": "Experience in leading projects and working with cross-functional teams",
+                "keywords": ["Team Leadership", "Architecture", "Mentoring", "Project Management"]
+            },
+            {
+                "title": "DevOps Engineer",
+                "strengths": "Understanding of deployment processes and infrastructure management",
+                "keywords": ["CI/CD", "Docker", "Kubernetes", "Cloud Infrastructure"]
+            }
+        ]
+    }
+
+def _get_mock_strategy_refinement(selected_paths: List[str], refinement_text: str) -> Dict[str, Any]:
+    """Generate mock strategy refinement data"""
+    mock_refined_paths = [
+        {
+            "title": "Cloud Solutions Architect",
+            "strengths": "Technical background combined with system design expertise",
+            "keywords": ["AWS", "Azure", "System Design", "Cloud Architecture"]
+        },
+        {
+            "title": "Engineering Manager",
+            "strengths": "Leadership skills and technical expertise",
+            "keywords": ["Team Management", "Technical Leadership", "Strategy", "Agile"]
+        }
+    ]
+    return {
+        "refinedPaths": mock_refined_paths
+    }
+
+def _get_mock_refined_strategy(refinement: str, selected_paths: List[CareerPath]) -> str:
+    """Generate mock refined strategy message"""
+    paths = ", ".join([path.title for path in selected_paths])
+    return f"Based on your interest in {paths} and your feedback about {refinement}, focus on developing cloud architecture skills and team leadership experience."
+
 def construct_prompt(linkedin_url: str, personal_story: str, sample_resume: str) -> str:
     """Constructs the detailed prompt for the Gemini API."""
     
-    # This is the heart of your application. A powerful prompt gets powerful results.
     prompt = f"""
     You are an expert career strategist and resume writer. Your task is to analyze the provided information for a candidate and generate a strategic career plan.
 
@@ -87,7 +131,8 @@ async def get_career_analysis(linkedin_url: str, personal_story: str, sample_res
     Returns a dictionary parsed from the AI's JSON response.
     """
     if not model:
-        raise ConnectionError("Gemini client is not initialized.")
+        logger.info("Gemini client not initialized, using mock career analysis")
+        return _get_mock_career_analysis()
 
     try:
         prompt = construct_prompt(linkedin_url, personal_story, sample_resume)
@@ -97,7 +142,6 @@ async def get_career_analysis(linkedin_url: str, personal_story: str, sample_res
         response_text = response.text
         
         # Clean the response to ensure it's valid JSON
-        # The AI sometimes includes markdown backticks (```json ... ```)
         cleaned_response = response_text.strip().replace("```json", "").replace("```", "").strip()
         
         logger.info("Received response from Gemini API. Parsing JSON...")
@@ -105,7 +149,7 @@ async def get_career_analysis(linkedin_url: str, personal_story: str, sample_res
         # Parse the JSON response
         analysis_data = json.loads(cleaned_response)
         
-        # Validate the data with Pydantic (optional but good practice)
+        # Validate the data with Pydantic
         validated_data = AnalysisResponse(**analysis_data)
         
         logger.info("Successfully parsed and validated AI response.")
@@ -160,7 +204,8 @@ async def get_strategy_refinement(linkedin_url: str, personal_story: str, sample
     Calls the Gemini API to get refined career path suggestions based on user input.
     """
     if not model:
-        raise ConnectionError("Gemini API client is not configured. Check your API key.")
+        logger.info("Gemini client not initialized, using mock strategy refinement")
+        return _get_mock_strategy_refinement(selected_paths, refinement_text)
 
     try:
         logger.info(f"Preparing to send refinement prompt with selected_paths: {selected_paths} and refinement_text: {refinement_text[:50]}...")
@@ -191,17 +236,15 @@ async def get_strategy_refinement(linkedin_url: str, personal_story: str, sample
     except Exception as e:
         logger.error(f"An unexpected error occurred during refinement: {e}", exc_info=True)
         raise
-        # Clean the response to ensure it's valid JSON
-        # Clean the response to ensure it's valid JSON
 
-# Simple refinement function for basic strategy updates
 async def get_refined_strategy(refinement: str, selected_paths: List[CareerPath]) -> str:
     """
     Gets a refined career strategy from the Gemini API based on user feedback.
     Returns a refined strategy message.
     """
     if not model:
-        raise ConnectionError("Gemini client is not initialized.")
+        logger.info("Gemini client not initialized, using mock refined strategy")
+        return _get_mock_refined_strategy(refinement, selected_paths)
 
     try:
         # Construct the refinement prompt

@@ -5,7 +5,7 @@ Handles distributing job search queries across multiple career paths
 import math
 from typing import Dict, List, Optional
 from dataclasses import dataclass
-from common_utils.common_utils.logging import get_logger
+from common_utils.logging import get_logger
 
 logger = get_logger(__name__)
 
