@@ -1,0 +1,218 @@
+{
+  "usajobs": {
+    "api_name": "USAJobs",
+    "tests": {
+      "simple_tech": {
+        "query": "software engineer",
+        "success": false,
+        "error": "Client error '400 Bad Request' for url 'https://data.usajobs.gov/api/search?Keyword=software%20engineer&ResultsPerPage=5&Page=1&DatePosted=05%2F25%2F2025'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+        "jobs_found": 0,
+        "sample_jobs": [],
+        "schema_errors": []
+      },
+      "frontend": {
+        "query": "frontend developer",
+        "success": false,
+        "error": "Client error '400 Bad Request' for url 'https://data.usajobs.gov/api/search?Keyword=frontend%20developer&ResultsPerPage=5&Page=1&DatePosted=05%2F25%2F2025'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+        "jobs_found": 0,
+        "sample_jobs": [],
+        "schema_errors": []
+      },
+      "project_manager": {
+        "query": "project manager",
+        "success": false,
+        "error": "Client error '400 Bad Request' for url 'https://data.usajobs.gov/api/search?Keyword=project%20manager&ResultsPerPage=5&Page=1&DatePosted=05%2F25%2F2025'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+        "jobs_found": 0,
+        "sample_jobs": [],
+        "schema_errors": []
+      },
+      "data_analyst": {
+        "query": "data analyst",
+        "success": false,
+        "error": "Client error '400 Bad Request' for url 'https://data.usajobs.gov/api/search?Keyword=data%20analyst&ResultsPerPage=5&Page=1&DatePosted=05%2F25%2F2025'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+        "jobs_found": 0,
+        "sample_jobs": [],
+        "schema_errors": []
+      }
+    },
+    "overall_success": false,
+    "total_jobs_found": 0,
+    "schema_errors": []
+  },
+  "jsearch": {
+    "api_name": "JSearch",
+    "tests": {
+      "simple_tech": {
+        "query": "software engineer",
+        "success": true,
+        "jobs_found": 5,
+        "sample_jobs": [
+          {
+            "title": "Software Engineer and Operations Support",
+            "company": "Ideal Innovations, Inc.",
+            "location": "Bethesda, Maryland",
+            "salary_range": "Not specified",
+            "posted_date": "2025-06-24",
+            "source": "jsearch"
+          },
+          {
+            "title": "Software Engineer",
+            "company": "Leidos",
+            "location": "Bethesda, Maryland",
+            "salary_range": "Not specified",
+            "posted_date": "2025-06-23",
+            "source": "jsearch"
+          },
+          {
+            "title": "Software Engineer Jobs",
+            "company": "Open Systems Technologies Corporation",
+            "location": "Alexandria, Virginia",
+            "salary_range": "Not specified",
+            "posted_date": "2025-06-24",
+            "source": "jsearch"
+          }
+        ],
+        "schema_errors": []
+      },
+      "frontend": {
+        "query": "frontend developer",
+        "success": true,
+        "jobs_found": 5,
+        "sample_jobs": [
+          {
+            "title": "Frontend Developer \u2013 CMS & Web Application Specialist",
+            "company": "Global Technical Talent, an Inc. 5000 Company",
+            "location": "Chevy Chase, Maryland",
+            "salary_range": "$70 - $100",
+            "posted_date": "2025-06-24",
+            "source": "jsearch"
+          },
+          {
+            "title": "Front End Developer (6 month contract)",
+            "company": "Futrend Technology, Inc.",
+            "location": "Bethesda, Maryland",
+            "salary_range": "Not specified",
+            "posted_date": "2025-06-24",
+            "source": "jsearch"
+          },
+          {
+            "title": "LEAD",
+            "company": "eTeam",
+            "location": "Arlington, Virginia",
+            "salary_range": "$45 - $46",
+            "posted_date": "2025-06-24",
+            "source": "jsearch"
+          }
+        ],
+        "schema_errors": []
+      },
+      "project_manager": {
+        "query": "project manager",
+        "success": true,
+        "jobs_found": 5,
+        "sample_jobs": [
+          {
+            "title": "Project Manager, Northeast Market Unit",
+            "company": "SAP",
+            "location": "Washington, District of Columbia",
+            "salary_range": "Not specified",
+            "posted_date": "2025-06-23",
+            "source": "jsearch"
+          },
+          {
+            "title": "Project Manager",
+            "company": "Johnson Controls",
+            "location": "Capitol Heights, Maryland",
+            "salary_range": "Not specified",
+            "posted_date": "2025-06-17",
+            "source": "jsearch"
+          },
+          {
+            "title": "Communications and Outreach Project Manager Jobs",
+            "company": "CACI",
+            "location": "Washington, District of Columbia",
+            "salary_range": "Not specified",
+            "posted_date": "2025-06-24",
+            "source": "jsearch"
+          }
+        ],
+        "schema_errors": []
+      },
+      "data_analyst": {
+        "query": "data analyst",
+        "success": true,
+        "jobs_found": 5,
+        "sample_jobs": [
+          {
+            "title": "Data Analyst, News Analytics, Insights & Training",
+            "company": "The Washington Post",
+            "location": "Not specified",
+            "salary_range": "$73,600 - $101,000",
+            "posted_date": "2025-06-24",
+            "source": "jsearch"
+          },
+          {
+            "title": "Data Analyst Jobs",
+            "company": "Rividium, Inc",
+            "location": "Not specified",
+            "salary_range": "Not specified",
+            "posted_date": "2025-06-24",
+            "source": "jsearch"
+          },
+          {
+            "title": "Data Analyst (Remote)",
+            "company": "Elder Research",
+            "location": "Not specified",
+            "salary_range": "Not specified",
+            "posted_date": "2025-06-03",
+            "source": "jsearch"
+          }
+        ],
+        "schema_errors": []
+      }
+    },
+    "overall_success": true,
+    "total_jobs_found": 20,
+    "schema_errors": []
+  },
+  "adzuna": {
+    "api_name": "Adzuna",
+    "tests": {
+      "simple_tech": {
+        "query": "software engineer",
+        "success": false,
+        "error": "Client error '400 Bad Request' for url 'https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=78ef4ff0&app_key=b3afe9fe926aef53aba48ae0cd5ddfde&what=software%20engineer&results_per_page=5&content-type=application%2Fjson&days_old=30'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+        "jobs_found": 0,
+        "sample_jobs": [],
+        "schema_errors": []
+      },
+      "frontend": {
+        "query": "frontend developer",
+        "success": false,
+        "error": "Client error '400 Bad Request' for url 'https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=78ef4ff0&app_key=b3afe9fe926aef53aba48ae0cd5ddfde&what=frontend%20developer&results_per_page=5&content-type=application%2Fjson&days_old=30'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+        "jobs_found": 0,
+        "sample_jobs": [],
+        "schema_errors": []
+      },
+      "project_manager": {
+        "query": "project manager",
+        "success": false,
+        "error": "Client error '400 Bad Request' for url 'https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=78ef4ff0&app_key=b3afe9fe926aef53aba48ae0cd5ddfde&what=project%20manager&results_per_page=5&content-type=application%2Fjson&days_old=30'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+        "jobs_found": 0,
+        "sample_jobs": [],
+        "schema_errors": []
+      },
+      "data_analyst": {
+        "query": "data analyst",
+        "success": false,
+        "error": "Client error '400 Bad Request' for url 'https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=78ef4ff0&app_key=b3afe9fe926aef53aba48ae0cd5ddfde&what=data%20analyst&results_per_page=5&content-type=application%2Fjson&days_old=30'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+        "jobs_found": 0,
+        "sample_jobs": [],
+        "schema_errors": []
+      }
+    },
+    "overall_success": false,
+    "total_jobs_found": 0,
+    "schema_errors": []
+  }
+}

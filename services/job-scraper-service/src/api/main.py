@@ -1,6 +1,7 @@
 # services/job-scraper-service/src/api/main.py
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl, Field
 from typing import Optional, Dict, Any, List
 import logging
@@ -8,11 +9,13 @@ import os
 import asyncio
 # Import the actual database saving function from our db_client module
 from src.db_client import save_job_to_db, APIError
-# Import job distributor and firecrawl client
+# Import job search components
 from src.job_distributor import JobDistributor, JobAllocation
-from src.scraper.firecrawl_client import fetch_jobs_firecrawl
+from src.planner import planner, SearchPlan
+from src.executor import executor, JobSearchResult
 # --- Import shared logging setup ---
-from common_utils.common_utils.logging import get_logger # Import the setup function
+from common_utils.logging import get_logger # Import the setup function
+
 
 # --- Initialize shared logger ---
 # Remove the basicConfig and getLogger(__name__) lines
@@ -61,6 +64,15 @@ app = FastAPI(
     title="Job Scraper Service API",
     description="Receives job data via webhook and processes it.",
     version="0.1.0"
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For development - restrict in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/")
@@ -156,102 +168,72 @@ async def health_check():
 )
 async def search_jobs(request: JobSearchRequest):
     """
-    Search for jobs across multiple career paths with smart distribution.
-    Redistributes quota from paths with few results to paths with more availability.
+    Search for jobs across multiple career paths using AI-driven strategy.
+    Uses Gemini to plan the most effective search approach for each path.
     """
-    logger.info(f"Starting job search for {len(request.career_paths)} career paths")
+    logger.info(f"Starting AI-driven job search for {len(request.career_paths)} career paths")
     
     try:
-        # Initialize distributor
-        distributor = JobDistributor()
-        
-        # Calculate initial distribution
+        # Get AI-generated search plan for all paths
         career_paths_dict = [path.model_dump() for path in request.career_paths]
-        initial_distribution = distributor.calculate_initial_distribution(
-            career_paths_dict,
-            request.total_jobs_requested
-        )
+        search_plan = await _get_search_plan(career_paths_dict, request.total_jobs_requested)
         
-        # First round of searches
+        if not search_plan:
+            raise ValueError("Failed to generate AI search plan")
+            
+        # Initialize job tracking
         allocations = {}
         jobs_by_path = {}
+        total_cost = 0.0
         
-        # Create search tasks for all paths
+        # Execute searches based on AI plan
         search_tasks = []
         for path in request.career_paths:
+            strategy = search_plan.strategies.get(path.title)
+            if not strategy:
+                logger.warning(f"No strategy found for {path.title}")
+                continue
+                
             search_params = {
                 "search_term": " ".join(path.keywords),
                 "location": request.location,
-                "filters": request.filters,
-                "limit": initial_distribution[path.title]
+                "filters": request.filters
             }
             
-            # Create async task for each path
             task = asyncio.create_task(
-                _search_jobs_for_path(path.title, search_params)
+                _search_jobs_for_path(path.title, search_params, strategy)
             )
             search_tasks.append((path.title, task))
-        
+            
         # Wait for all searches to complete
         for path_title, task in search_tasks:
             try:
                 jobs = await task
                 allocations[path_title] = JobAllocation(
                     path_title=path_title,
-                    requested=initial_distribution[path_title],
+                    requested=len(jobs),  # We let the AI plan determine the target
                     found=len(jobs),
                     jobs=jobs
                 )
                 jobs_by_path[path_title] = jobs
+                
+                # Track costs
+                strategy = search_plan.strategies.get(path_title)
+                if strategy:
+                    total_cost += strategy.cost_estimate
+                    
             except Exception as e:
                 logger.error(f"Error searching jobs for {path_title}: {e}")
                 allocations[path_title] = JobAllocation(
                     path_title=path_title,
-                    requested=initial_distribution[path_title],
+                    requested=0,
                     found=0,
                     jobs=[]
                 )
                 jobs_by_path[path_title] = []
         
-        # Check if redistribution is needed
-        total_found = sum(alloc.found for alloc in allocations.values())
-        
-        if total_found < request.total_jobs_requested:
-            # Try redistribution
-            new_distribution = distributor.redistribute_unfilled_quota(
-                allocations,
-                request.total_jobs_requested
-            )
-            
-            # Second round for paths that need more jobs
-            redistribution_tasks = []
-            for path_title, new_target in new_distribution.items():
-                current_count = allocations[path_title].found
-                if new_target > current_count:
-                    # Need to fetch more jobs for this path
-                    path = next(p for p in request.career_paths if p.title == path_title)
-                    search_params = {
-                        "search_term": " ".join(path.keywords),
-                        "location": request.location,
-                        "filters": request.filters,
-                        "limit": new_target - current_count,
-                        "offset": current_count  # Skip already fetched jobs
-                    }
-                    
-                    task = asyncio.create_task(
-                        _search_jobs_for_path(path_title, search_params)
-                    )
-                    redistribution_tasks.append((path_title, task))
-            
-            # Wait for redistribution searches
-            for path_title, task in redistribution_tasks:
-                try:
-                    additional_jobs = await task
-                    allocations[path_title].jobs.extend(additional_jobs)
-                    allocations[path_title].found += len(additional_jobs)
-                    jobs_by_path[path_title].extend(additional_jobs)
-                except Exception as e:
-                    logger.error(f"Error in redistribution for {path_title}: {e}")
+        # Initialize distributor for deduplication
+        distributor = JobDistributor()
         
         # Deduplicate jobs across paths
         deduplicated_jobs = distributor.merge_and_deduplicate_jobs(
@@ -263,15 +245,27 @@ async def search_jobs(request: JobSearchRequest):
         allocation_summary = distributor.create_allocation_summary(allocations)
         total_jobs_found = sum(len(jobs) for jobs in deduplicated_jobs.values())
         
+        # Create detailed search metadata
+        search_metadata = {
+            "search_strategy": "ai_driven",
+            "deduplication": "first_path",
+            "paths_searched": len(request.career_paths),
+            "total_cost": total_cost,
+            "search_plan": {
+                path: {
+                    "source": strategy.source,
+                    "method": strategy.method,
+                    "cost_estimate": strategy.cost_estimate,
+                    "priority": strategy.priority
+                } for path, strategy in search_plan.strategies.items()
+            }
+        }
+        
         response = JobSearchResponse(
             allocation_summary=allocation_summary,
             jobs_by_path=deduplicated_jobs,
             total_jobs_found=total_jobs_found,
-            search_metadata={
-                "search_strategy": "smart_distribution",
-                "deduplication": "first_path",
-                "paths_searched": len(request.career_paths)
-            }
+            search_metadata=search_metadata
         )
         
         logger.info(f"Job search completed. Found {total_jobs_found} jobs across {len(request.career_paths)} paths")
@@ -284,39 +278,62 @@ async def search_jobs(request: JobSearchRequest):
             detail=f"An error occurred during job search: {str(e)}"
         )
 
-async def _search_jobs_for_path(path_title: str, search_params: Dict) -> List[Dict]:
+async def _search_jobs_for_path(path_title: str, search_params: Dict, strategy: Optional[Dict] = None) -> List[Dict]:
     """
-    Helper function to search jobs for a specific career path.
-    For MVP, returns mock data. Will integrate with Firecrawl later.
+    Helper function to search jobs for a specific career path using AI-driven strategy.
+    Falls back to mock data if all strategies fail.
     """
-    logger.info(f"Searching jobs for {path_title} with params: {search_params}")
+    logger.info(f"Starting AI-driven job search for {path_title}")
     
-    # TODO: Replace with actual Firecrawl integration
-    # For now, return mock data for testing
-    mock_jobs = []
-    base_count = min(search_params.get("limit", 20), 30)  # Simulate varying results
-    
-    for i in range(base_count):
-        mock_jobs.append({
-            "title": f"{path_title} Position {i+1}",
-            "company": f"Company {i+1}",
-            "location": search_params.get("location", "Remote"),
-            "description": f"Mock job description for {path_title}",
-            "url": f"https://example.com/jobs/{path_title.lower().replace(' ', '-')}-{i+1}",
-            "posted_date": "2024-01-15",
-            "salary_range": {
-                "min": 80000 + (i * 5000),
-                "max": 120000 + (i * 5000),
-                "currency": "USD"
-            },
-            "source": "mock"
-        })
-    
-    # Simulate some paths returning fewer results
-    if "junior" in path_title.lower():
-        mock_jobs = mock_jobs[:5]  # Junior positions are scarce
-    
-    return mock_jobs
+    try:
+        # If no strategy provided, get one from the planner
+        if not strategy:
+            search_plan = await planner.create_search_plan([{
+                "title": path_title,
+                "keywords": search_params.get("search_term", "").split()
+            }])
+            strategy = search_plan.strategies.get(path_title)
+            
+            if not strategy:
+                logger.error(f"No strategy found for {path_title}")
+                return []
+        
+        # Execute the search strategy
+        result = await executor.execute_search(path_title, strategy)
+        
+        # Log the results
+        logger.info(f"Completed job search for {path_title} using {result.source}")
+        logger.info(f"Found {len(result.jobs)} jobs, cost incurred: ${result.cost_incurred:.2f}")
+        
+        if result.jobs:
+            # Log sample job titles
+            sample_titles = [job.get('title', 'Unknown') for job in result.jobs[:3]]
+            logger.info(f"Sample job titles for {path_title}: {sample_titles}")
+        
+        return result.jobs
+        
+    except Exception as e:
+        logger.error(f"Error in AI-driven job search for {path_title}: {e}")
+        return []
+
+async def _get_search_plan(career_paths: List[Dict], total_jobs: int) -> SearchPlan:
+    """
+    Get an AI-generated search plan for all career paths
+    """
+    try:
+        # Create search plan using AI
+        search_plan = await planner.create_search_plan(career_paths)
+        
+        # Log the plan
+        logger.info(f"AI generated search plan for {len(career_paths)} paths:")
+        for path, strategy in search_plan.strategies.items():
+            logger.info(f"- {path}: Using {strategy.source} ({strategy.method}) - "
+                       f"Est. cost: ${strategy.cost_estimate:.2f}")
+        
+        return search_plan
+    except Exception as e:
+        logger.error(f"Error getting search plan: {e}")
+        return None
 
 # --- Optional: Main block for direct running ---
 if __name__ == "__main__":

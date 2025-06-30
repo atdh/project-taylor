@@ -5,8 +5,12 @@ import logging
 from supabase import create_client, Client
 from postgrest.exceptions import APIError
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
 # --- Import shared logging setup ---
-from common_utils.common_utils.logging import get_logger # Import the setup function
+from common_utils.logging import get_logger # Import the setup function
+
+# Load environment variables from .env file
+load_dotenv()
 
 # --- Initialize shared logger ---
 # Remove the basicConfig and getLogger(__name__) lines

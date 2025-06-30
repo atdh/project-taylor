@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 
                 // Call the job search API
-                const response = await fetch('http://72bc8b72fb7cc7fdc8.blackbx.ai/api/search-jobs', {
+                const response = await fetch('http://localhost:8001/api/search-jobs', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
