@@ -44,9 +44,9 @@ class JobSearchExecutor:
         
     async def execute_search(self, path_title: str, strategy: JobSearchStrategy) -> JobSearchResult:
         """
-        Execute a job search for a specific career path using the given strategy
+        Execute a job search for a specific career path using adaptive strategy with fallbacks
         """
-        logger.info(f"Executing job search for {path_title} using {strategy.source}")
+        logger.info(f"Executing adaptive job search for {path_title} using {strategy.source}")
         
         try:
             # Check if we're within budget
@@ -59,25 +59,93 @@ class JobSearchExecutor:
             if self.use_mock:
                 return await self._get_mock_jobs(path_title, strategy.source)
             
-            # Try to execute with real APIs
-            result = await self._execute_with_apis(path_title, strategy)
-            if result:
+            # Try adaptive search with multiple query variations
+            result = await self._execute_adaptive_search(path_title, strategy)
+            if result and result.jobs:
                 self.total_cost += result.cost_incurred
                 return result
             
-            # If all APIs failed, use mock data
-            logger.warning(f"All APIs failed for {path_title}. Using mock data.")
+            # If primary strategy failed, try backup strategy
+            if hasattr(strategy, 'backup_strategy') and strategy.backup_strategy:
+                logger.info(f"Primary strategy failed for {path_title}. Trying backup strategy.")
+                backup_strategy = JobSearchStrategy(**strategy.backup_strategy)
+                backup_result = await self._execute_adaptive_search(path_title, backup_strategy)
+                if backup_result and backup_result.jobs:
+                    self.total_cost += backup_result.cost_incurred
+                    return backup_result
+            
+            # If all strategies failed, use mock data
+            logger.warning(f"All adaptive strategies failed for {path_title}. Using mock data.")
             return await self._get_mock_jobs(path_title, strategy.source)
             
         except Exception as e:
-            logger.error(f"Error executing search for {path_title}: {e}")
-            if hasattr(strategy, 'backup_strategy') and strategy.backup_strategy:
-                logger.info(f"Trying backup strategy for {path_title}")
-                backup_strategy = JobSearchStrategy(**strategy.backup_strategy)
-                return await self.execute_search(path_title, backup_strategy)
-            else:
-                logger.warning(f"No backup strategy available for {path_title}. Using mock data.")
-                return await self._get_mock_jobs(path_title, strategy.source)
+            logger.error(f"Error executing adaptive search for {path_title}: {e}")
+            logger.warning(f"Falling back to mock data for {path_title}")
+            return await self._get_mock_jobs(path_title, strategy.source)
+
+    async def _execute_adaptive_search(self, path_title: str, strategy: JobSearchStrategy) -> Optional[JobSearchResult]:
+        """
+        Execute search with adaptive query variations - tries multiple approaches like a human would
+        """
+        client = self.client_manager.get_client(strategy.source.lower())
+        if not client:
+            logger.warning(f"No client available for {strategy.source}")
+            return None
+        
+        # Prepare all query variations to try
+        queries_to_try = []
+        
+        # Start with primary query
+        if hasattr(strategy, 'primary_query'):
+            queries_to_try.append(strategy.primary_query)
+        
+        # Add fallback queries
+        if hasattr(strategy, 'fallback_queries') and strategy.fallback_queries:
+            queries_to_try.extend(strategy.fallback_queries)
+        
+        # Add synonyms as additional variations
+        if hasattr(strategy, 'synonyms') and strategy.synonyms:
+            queries_to_try.extend(strategy.synonyms[:2])  # Add first 2 synonyms
+        
+        # Fallback to basic query if no variations available
+        if not queries_to_try:
+            queries_to_try = [path_title]
+        
+        logger.info(f"Trying {len(queries_to_try)} query variations for {path_title} on {strategy.source}")
+        
+        # Try each query variation until we find results
+        for i, query in enumerate(queries_to_try):
+            try:
+                logger.info(f"Attempt {i+1}/{len(queries_to_try)}: Searching '{query}' on {strategy.source}")
+                
+                # Use location and max_age_days from strategy if available
+                location = getattr(strategy, 'location', '') or ''
+                max_age_days = getattr(strategy, 'max_age_days', 7)
+                
+                jobs = await client.search_jobs(
+                    keywords=query,
+                    location=location,
+                    limit=10,
+                    max_age_days=max_age_days
+                )
+                
+                if jobs:
+                    logger.info(f"✅ Success! Found {len(jobs)} jobs with query '{query}' on {strategy.source}")
+                    # Log sample job titles for verification
+                    sample_titles = [job.get('title', 'Unknown') for job in jobs[:3]]
+                    logger.info(f"Sample job titles: {sample_titles}")
+                    
+                    cost = self.api_costs.get(strategy.source.lower(), 0.01)
+                    return JobSearchResult(jobs, strategy.source, cost)
+                else:
+                    logger.info(f"❌ No results for query '{query}' on {strategy.source}")
+                    
+            except Exception as e:
+                logger.warning(f"Error with query '{query}' on {strategy.source}: {e}")
+                continue
+        
+        logger.warning(f"All {len(queries_to_try)} query variations failed for {path_title} on {strategy.source}")
+        return None
 
     async def _execute_with_apis(self, path_title: str, strategy: JobSearchStrategy) -> Optional[JobSearchResult]:
         """
@@ -172,8 +240,8 @@ class JobSearchExecutor:
                 "description": f"Mock job description for {path_title}. This is a great opportunity to work in {path_title} with modern technologies and a collaborative team.",
                 "url": f"https://example.com/jobs/{path_title.lower().replace(' ', '-')}-{i+1}",
                 "source": "mock",
-                "salary_range": "",
-                "posted_date": "",
+                "salary_range": "$80,000 - $150,000",  # Default salary range
+                "posted_date": "Recently posted",  # Default for empty dates
                 "career_path": path_title,
                 "refined": False
             }

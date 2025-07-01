@@ -160,11 +160,8 @@ class USAJobsClient(JobSearchClient):
         if location:
             params["LocationName"] = location
             
-        # Add date filtering - USAJobs uses DatePosted parameter
-        if max_age_days <= 30:
-            from datetime import datetime, timedelta
-            cutoff_date = datetime.now() - timedelta(days=max_age_days)
-            params["DatePosted"] = cutoff_date.strftime("%m/%d/%Y")
+        # Remove date filtering for now to avoid 400 errors
+        # USAJobs DatePosted parameter format is causing issues
             
         async def make_request():
             response = await self.client.get(self.base_url, headers=headers, params=params)
@@ -265,12 +262,42 @@ class JSearchClient(JobSearchClient):
             "refined": False
         }
         
+    def _simplify_query_for_jsearch(self, keywords: str) -> str:
+        """Simplify complex queries for JSearch API"""
+        import re
+        
+        # Remove quotes and complex operators
+        simplified = re.sub(r'["\(\)]', '', keywords)
+        simplified = re.sub(r'\b(AND|OR)\b', ' ', simplified, flags=re.IGNORECASE)
+        
+        # Split into words and take the most relevant ones
+        words = [word.strip() for word in simplified.split() if len(word.strip()) > 2]
+        
+        # For JSearch, we want the role and main technologies
+        # Example: "Senior Software Engineer AI/ML" -> "Software Engineer AI Machine Learning"
+        main_keywords = []
+        for word in words:
+            # Keep role-related terms
+            if any(term in word.lower() for term in ['engineer', 'developer', 'architect', 'lead']):
+                main_keywords.append(word)
+            # Keep technology terms
+            elif any(term in word.lower() for term in ['ai', 'ml', 'python', 'java', 'cloud']):
+                main_keywords.append(word)
+            # Limit to 4-5 main keywords
+            if len(main_keywords) >= 5:
+                break
+        
+        return ' '.join(main_keywords)
+
     async def search_jobs(self, keywords: str, location: str = "", limit: int = 10, max_age_days: int = 7) -> List[Dict]:
         """Search JSearch API"""
         headers = {
             "X-RapidAPI-Key": self.api_key,
             "X-RapidAPI-Host": self.api_host
         }
+        
+        # Simplify the query for better results
+        simplified_keywords = self._simplify_query_for_jsearch(keywords)
         
         # Map max_age_days to JSearch date_posted parameter
         if max_age_days <= 1:
@@ -285,7 +312,7 @@ class JSearchClient(JobSearchClient):
             date_posted = "all"
             
         params = {
-            "query": keywords,
+            "query": simplified_keywords,
             "page": "1",
             "num_pages": "1",
             "date_posted": date_posted
