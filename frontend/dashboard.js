@@ -498,13 +498,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 };
                 
-                // Call the job search API
-                const response = await fetch('http://localhost:8001/api/search-jobs', {
+                // Prepare AI-enhanced request data
+                const aiRequestData = {
+                    linkedin_url: document.getElementById('linkedin_profile').value.trim(),
+                    personal_story: document.getElementById('personal_story').value.trim(),
+                    sample_resume: document.getElementById('sample_resume').value.trim(),
+                    career_paths: selectedCareerPaths.map(path => ({
+                        title: path.title,
+                        keywords: Array.isArray(path.keywords) ? path.keywords : 
+                                 (typeof path.keywords === 'string' ? path.keywords.split(', ') : []),
+                        strengths: path.strengths || ''
+                    })),
+                    preferences: {
+                        location: "remote",
+                        experience_level: "senior",
+                        company_size: "any"
+                    }
+                };
+                
+                // Call the AI-enhanced job search API
+                const response = await fetch('http://localhost:8001/api/search-jobs-ai', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(requestData)
+                    body: JSON.stringify(aiRequestData)
                 });
                 
                 if (!response.ok) {

@@ -13,6 +13,8 @@ from src.db_client import save_job_to_db, APIError
 from src.job_distributor import JobDistributor, JobAllocation
 from src.planner import planner, SearchPlan
 from src.executor import executor, JobSearchResult
+from src.ai_job_matcher import ai_job_matcher, PersonalizedJobSearchRequest, EnhancedJobResult
+from src.ai_job_enricher import job_enricher, EnrichedJobData
 # --- Import shared logging setup ---
 from common_utils.logging import get_logger # Import the setup function
 
@@ -34,6 +36,15 @@ class JobData(BaseModel):
     description: str = Field(..., min_length=1, description="The full description of the job.")
     url: Optional[HttpUrl] = Field(None, description="The URL to the original job posting.")
     source_id: Optional[str] = Field(None, description="An optional identifier from the scraping source.")
+    
+    # Rich fields from job sources
+    salary_min: Optional[int] = Field(None, description="Minimum salary range")
+    salary_max: Optional[int] = Field(None, description="Maximum salary range")
+    salary_currency: Optional[str] = Field("USD", description="Salary currency")
+    location_city: Optional[str] = Field(None, description="Job location city")
+    location_state: Optional[str] = Field(None, description="Job location state")
+    posted_date: Optional[str] = Field(None, description="Job posting date")
+    source: str = Field(..., description="Job source (usajobs, jsearch, adzuna)")
 
     class Config:
         extra = 'ignore'
@@ -86,6 +97,7 @@ def root():
             "GET /health": "Health check endpoint",
             "POST /webhook/new-job": "Receive new job data",
             "POST /api/search-jobs": "Search jobs across multiple career paths",
+            "POST /api/search-jobs-ai": "AI-enhanced personalized job search",
             "GET /docs": "Interactive API documentation (Swagger UI)",
             "GET /redoc": "Alternative API documentation (ReDoc)"
         }
@@ -102,47 +114,118 @@ def root():
 # Endpoint can still be async, FastAPI handles calling sync functions from async routes
 async def receive_new_job(job: JobData):
     """
-    Endpoint to receive new job data from an external scraper.
-    Validates, parses, and saves the job data to the database.
+    AI-Enhanced endpoint to receive new job data from an external scraper.
+    Validates, enriches with AI analysis, and saves the job data to the database.
     """
-    logger.info(f"Received new job via webhook: {job.title} at {job.company or 'Unknown Company'}") # Use shared logger
+    logger.info(f"Received new job via webhook: {job.title} at {job.company or 'Unknown Company'} from {job.source}")
 
     job_dict = job.model_dump()
 
     try:
-        # --- Call the REAL database saving function (NO await) ---
-        save_result = save_job_to_db(job_dict)
-        logger.info(f"Job '{job.title}' processed for saving. Result: {save_result}") # Use shared logger
+        # Step 1: AI Enrichment Pipeline
+        logger.info(f"Starting AI enrichment for job: {job.title}")
+        enriched_job = await job_enricher.enrich_job(job_dict, job.source)
+        
+        # Step 2: Prepare enriched data for database
+        enriched_data = {
+            # Original fields
+            "title": job.title,
+            "company": enriched_job.company_insights.normalized_name,  # Use AI-normalized company name
+            "description": job.description,
+            "url": str(job.url) if job.url else None,
+            "source_id": job.source_id,
+            "source": job.source,
+            
+            # Rich fields from sources
+            "salary_min": job.salary_min,
+            "salary_max": job.salary_max,
+            "salary_currency": job.salary_currency,
+            "location_city": job.location_city,
+            "location_state": job.location_state,
+            "posted_date": job.posted_date,
+            
+            # AI-enriched fields
+            "ai_quality_score": enriched_job.quality_score.overall_score,
+            "ai_skills_extracted": enriched_job.skills_analysis.required_skills + enriched_job.skills_analysis.preferred_skills,
+            "ai_seniority_level": enriched_job.skills_analysis.experience_level,
+            "ai_remote_friendly": enriched_job.location_analysis.is_remote_friendly,
+            "ai_estimated_salary_min": enriched_job.salary_insights.estimated_min,
+            "ai_estimated_salary_max": enriched_job.salary_insights.estimated_max,
+            "ai_company_type": enriched_job.company_insights.company_type,
+            "ai_industry": enriched_job.company_insights.industry,
+            "ai_enrichment_timestamp": enriched_job.enrichment_timestamp,
+            "ai_processing_time_ms": enriched_job.processing_time_ms,
+            
+            # Status
+            "status": "enriched"
+        }
+        
+        # Step 3: Save enriched job to database
+        save_result = save_job_to_db(enriched_data)
+        logger.info(f"Job '{job.title}' enriched and saved. Quality score: {enriched_job.quality_score.overall_score:.2f}, "
+                   f"Processing time: {enriched_job.processing_time_ms}ms")
 
-        # Return a success response, potentially including the new job ID
+        # Return enhanced response with AI insights
         return {
-            "message": "Job data received and saved successfully.",
+            "message": "Job data received, AI-enriched, and saved successfully.",
             "job_title": job.title,
             "job_id": save_result.get("job_id"),
-            "save_status": save_result.get("db_status")
+            "save_status": save_result.get("db_status"),
+            "ai_insights": {
+                "quality_score": enriched_job.quality_score.overall_score,
+                "normalized_company": enriched_job.company_insights.normalized_name,
+                "seniority_level": enriched_job.skills_analysis.experience_level,
+                "remote_friendly": enriched_job.location_analysis.is_remote_friendly,
+                "key_skills": enriched_job.skills_analysis.required_skills[:5],  # Top 5 skills
+                "processing_time_ms": enriched_job.processing_time_ms
+            }
         }
 
     # Catch specific database errors if needed for different responses
     except APIError as db_api_error:
-        logger.error(f"Database API error processing job '{job.title}': {db_api_error.message}", exc_info=True) # Use shared logger
+        logger.error(f"Database API error processing job '{job.title}': {db_api_error.message}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Database error occurred while processing the job."
         )
     # Catch ConnectionError if db_client raises it on init failure
     except ConnectionError as conn_error:
-        logger.error(f"Database connection error processing job '{job.title}': {conn_error}", exc_info=True) # Use shared logger
+        logger.error(f"Database connection error processing job '{job.title}': {conn_error}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Database connection error occurred."
         )
     except Exception as e:
-        # Catch any other unexpected errors during the save process
-        logger.error(f"Unexpected error processing job '{job.title}': {e}", exc_info=True) # Use shared logger
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred while processing the job."
-        )
+        # If AI enrichment fails, save basic job data
+        logger.error(f"Error during AI enrichment for job '{job.title}': {e}", exc_info=True)
+        logger.info(f"Falling back to basic job save for: {job.title}")
+        
+        try:
+            # Fallback: save basic job data without AI enrichment
+            basic_data = {
+                "title": job.title,
+                "company": job.company,
+                "description": job.description,
+                "url": str(job.url) if job.url else None,
+                "source_id": job.source_id,
+                "source": job.source,
+                "status": "basic"  # Mark as not enriched
+            }
+            save_result = save_job_to_db(basic_data)
+            
+            return {
+                "message": "Job data received and saved (AI enrichment failed).",
+                "job_title": job.title,
+                "job_id": save_result.get("job_id"),
+                "save_status": save_result.get("db_status"),
+                "warning": "AI enrichment failed, saved basic job data only"
+            }
+        except Exception as fallback_error:
+            logger.error(f"Fallback save also failed for job '{job.title}': {fallback_error}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to save job data: {str(fallback_error)}"
+            )
 
 # --- Health Check Endpoint ---
 @app.get(
@@ -334,6 +417,67 @@ async def _get_search_plan(career_paths: List[Dict], total_jobs: int) -> SearchP
     except Exception as e:
         logger.error(f"Error getting search plan: {e}")
         return None
+
+# --- AI-Enhanced Job Search Endpoint ---
+@app.post(
+    "/api/search-jobs-ai",
+    status_code=status.HTTP_200_OK,
+    summary="Search jobs with AI-powered personalization",
+    response_description="Personalized job search results with AI-generated insights",
+    tags=["Jobs"]
+)
+async def search_jobs_ai(request: PersonalizedJobSearchRequest):
+    """
+    Enhanced job search that uses AI to understand the person's background and find perfect matches.
+    Takes into account LinkedIn profile, personal story, and resume to personalize the search.
+    """
+    logger.info("Starting AI-enhanced personalized job search")
+    
+    try:
+        # Execute personalized job search
+        results = await ai_job_matcher.execute_personalized_job_search(request)
+        
+        # Group results by career path
+        jobs_by_path = {}
+        allocation_summary = {}
+        
+        for result in results:
+            if result.career_path not in jobs_by_path:
+                jobs_by_path[result.career_path] = []
+                allocation_summary[result.career_path] = {"requested": 0, "found": 0}
+            
+            # Add match score to job data
+            enhanced_job = {
+                **result.job_data,
+                "match_score": result.match_score.model_dump(),
+                "personalized_insights": result.personalized_insights
+            }
+            
+            jobs_by_path[result.career_path].append(enhanced_job)
+            allocation_summary[result.career_path]["found"] += 1
+        
+        # Create response
+        response = JobSearchResponse(
+            allocation_summary=allocation_summary,
+            jobs_by_path=jobs_by_path,
+            total_jobs_found=len(results),
+            search_metadata={
+                "search_strategy": "ai_enhanced_personalized",
+                "paths_searched": len(jobs_by_path),
+                "personalization_level": "deep",
+                "ai_analysis": "full_profile"
+            }
+        )
+        
+        logger.info(f"Completed AI-enhanced job search. Found {len(results)} personalized matches")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error in AI-enhanced job search: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during AI-enhanced job search: {str(e)}"
+        )
 
 # --- Optional: Main block for direct running ---
 if __name__ == "__main__":

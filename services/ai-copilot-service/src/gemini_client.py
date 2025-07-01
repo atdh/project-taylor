@@ -11,11 +11,8 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load environment variables
-dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-if os.path.exists(dotenv_path):
-    logger.info(f"Loading environment variables from: {dotenv_path}")
-    load_dotenv(dotenv_path=dotenv_path)
+# Environment variables are loaded by run.py from .blackboxrules
+# No need to load them again here
 
 # --- Configure the Gemini API client ---
 try:
