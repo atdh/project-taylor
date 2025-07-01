@@ -21,7 +21,8 @@ import logging
 import os
 # Import the actual database saving function from our db_client module
 # This import happens AFTER load_dotenv() has potentially run.
-from src.db_client import save_job_to_db, APIError, ConnectionError # Also import specific DB errors if needed for handling
+from src.db_client import save_job_to_db, APIError  # Import only what's defined in db_client.py
+from requests.exceptions import ConnectionError  # Import ConnectionError from requests instead
 
 # --- Placeholder for Database Logic (COMMENTED OUT FOR REFERENCE) ---
 # This was the original placeholder function used for initial API testing with mocks.
