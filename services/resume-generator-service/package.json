@@ -5,6 +5,7 @@
   "dependencies": {
     "jsonresume-theme-elegant": "^1.16.1",
     "jsonresume-theme-flat": "^0.3.7",
+    "jsonresume-theme-modern": "^0.0.18",
     "jsonresume-theme-stackoverflow": "^2.1.0",
     "puppeteer": "^22.15.0",
     "resume-cli": "^3.0.8"
