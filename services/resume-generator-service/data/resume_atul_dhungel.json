@@ -1,0 +1,208 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json",
+  "basics": {
+    "name": "Atul Dhungel",
+    "label": "Full-Stack Developer",
+    "email": "dhungelatul99@gmail.com",
+    "phone": "+1-720-878-4197",
+    "url": "https://atuld.com",
+    "summary": "Full-Stack Software Developer with experience in building scalable applications across AI, automation, and e-commerce. Hands-on with React, Python, FastAPI, and Postgres. Proven record in founding technical projects, managing teams, and delivering reliable backend systems.",
+    "location": {
+      "city": "Denver",
+      "region": "CO",
+      "countryCode": "US"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "atul-dhungel",
+        "url": "https://www.linkedin.com/in/atul-dhungel"
+      },
+      {
+        "network": "GitHub",
+        "username": "atdh",
+        "url": "https://github.com/atdh"
+      },
+      {
+        "network": "Website",
+        "username": "atuldhungel",
+        "url": "https://atuld.com"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "Project Taylor",
+      "location": "Remote",
+      "position": "Personal Project / Full-Stack Developer",
+      "startDate": "2024-01-01",
+      "summary": "AI-powered resume automation platform using LLMs and job scraping APIs.",
+      "highlights": [
+        "Built modular FastAPI services for AI Copilot and job discovery",
+        "Integrated Gemini API, Supabase, and async job orchestration",
+        "Created SPA with Vanilla JS + Tailwind, including JSON export",
+        "Implemented full testing suite with fallback handling"
+      ]
+    },
+    {
+      "name": "Referrify",
+      "location": "Remote",
+      "position": "Product & Engineering Lead",
+      "startDate": "2023-01-01",
+      "endDate": "2024-01-01",
+      "summary": "Referral-based SaaS platform with automation and manual failover handling.",
+      "highlights": [
+        "Managed engineering team and customer support agents",
+        "Oversaw automation system transition from Selenium to Playwright",
+        "Implemented Telegram bot alerts and Discord credential recovery",
+        "Used Node.js, React, PostgreSQL, Playwright"
+      ]
+    },
+    {
+      "name": "Walter",
+      "location": "Remote",
+      "position": "Co-Founder & Technical Lead",
+      "startDate": "2022-01-01",
+      "endDate": "2023-01-01",
+      "summary": "Shopify store for Spanish bespoke shoes with CSV automation",
+      "highlights": [
+        "Cleaned and converted vendor CSVs with Python/Pandas for Shopify import",
+        "Resolved compatibility issues between bespoke exports and Shopify schema"
+      ]
+    },
+    {
+      "name": "Call It",
+      "location": "Remote",
+      "position": "Co-Founder & QA/Strategy Contributor",
+      "startDate": "2023-01-01",
+      "summary": "Options trading educational game (digital board game).",
+      "highlights": [
+        "Pitched shift from physical to digital prototype",
+        "Helped test and log feature bugs, hired developers",
+        "Tech stack: AWS, Amplify, Next.js, TypeScript"
+      ]
+    },
+    {
+      "name": "Direct Outreach Sales Engine",
+      "location": "Remote",
+      "position": "Co-Creator & Growth Operator",
+      "startDate": "2023-01-01",
+      "endDate": "2024-01-01",
+      "summary": "Manual outreach pipeline using Facebook to test demand and close deals.",
+      "highlights": [
+        "Designed warm-up flow for accounts to reduce spam flagging",
+        "Peaked at $10K/month in revenue before team conflict/platform issues"
+      ]
+    },
+    {
+      "name": "Pari Shringar",
+      "location": "Nepal",
+      "position": "Co-Founder & Ops Lead",
+      "startDate": "2023-02-01",
+      "endDate": "2023-03-01",
+      "summary": "Nepal-based lingerie microbrand launched around Valentine\u2019s Day.",
+      "highlights": [
+        "Sourced inventory via Alibaba and managed import logistics",
+        "Ran IG ad campaigns, processed local QR payments via Khalti"
+      ]
+    },
+    {
+      "name": "Tata Consultancy Services (TCS)",
+      "location": "Remote",
+      "position": "Software Engineer",
+      "startDate": "2021-06-01",
+      "endDate": "2023-08-01",
+      "summary": "Trained in Java/Angular, assigned to CitiBank and MetLife, but not given active tasks.",
+      "highlights": [
+        "Completed onboarding and technical training",
+        "Prepared for Java certification, supported internal handoffs"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of Colorado Boulder",
+      "area": "Computer Science",
+      "studyType": "B.E.",
+      "startDate": "2017-08-01",
+      "endDate": "2021-05-01",
+      "score": "GPA: 3.4",
+      "courses": [
+        "Data Structures",
+        "Algorithms",
+        "Web Development",
+        "Software Engineering"
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "name": "Languages",
+      "keywords": [
+        "Python",
+        "JavaScript",
+        "TypeScript",
+        "SQL",
+        "Bash"
+      ]
+    },
+    {
+      "name": "Frameworks & Tools",
+      "keywords": [
+        "FastAPI",
+        "Node.js",
+        "React",
+        "Next.js",
+        "Tailwind CSS",
+        "Docker",
+        "Supabase",
+        "PostgreSQL"
+      ]
+    },
+    {
+      "name": "AI/LLM",
+      "keywords": [
+        "Google Gemini API",
+        "Prompt Engineering",
+        "JSON Schema Validation"
+      ]
+    },
+    {
+      "name": "Testing",
+      "keywords": [
+        "pytest",
+        "pytest-asyncio",
+        "httpx",
+        "unittest.mock"
+      ]
+    },
+    {
+      "name": "DevOps/Infra",
+      "keywords": [
+        "AWS Amplify",
+        "EC2",
+        "Playwright",
+        "Selenium"
+      ]
+    },
+    {
+      "name": "Other Tools",
+      "keywords": [
+        "Trello",
+        "ClickUp",
+        "Telegram Bots",
+        "Discord",
+        "Shopify",
+        "Khalti",
+        "TradingView",
+        "Tastytrade"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Options Trading & Technical Analysis",
+      "description": "Traded SPY using multi-leg strategies (iron condors, covered calls). Daily technical analysis via TradingView and macroeconomic research (FOMC, CPI). Executed trades using Tastytrade."
+    }
+  ]
+}
