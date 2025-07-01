@@ -5,20 +5,34 @@ import json
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
+from dotenv import load_dotenv
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment variables
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+if os.path.exists(dotenv_path):
+    logger.info(f"Loading environment variables from: {dotenv_path}")
+    load_dotenv(dotenv_path=dotenv_path)
+
 # --- Configure the Gemini API client ---
 try:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    logger.info("Found GEMINI_API_KEY in environment")
     if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY environment variable not found.")
+        raise ValueError("GEMINI_API_KEY environment variable not found. Please add it to your .blackboxrules file.")
     genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel('gemini-1.5-flash')
-    logger.info("Gemini client configured successfully.")
+    logger.info("Gemini client configured successfully with API key.")
+except ValueError as e:
+    logger.error(f"Configuration Error: {e}")
+    logger.error("Please ensure GEMINI_API_KEY is properly set in .blackboxrules")
+    model = None
 except Exception as e:
-    logger.error(f"Error configuring Gemini client: {e}")
+    logger.error(f"Unexpected error configuring Gemini client: {e}")
+    logger.error("Stack trace:", exc_info=True)
     model = None
 
 # --- Pydantic Models for Structured Output ---
@@ -129,39 +143,63 @@ async def get_career_analysis(linkedin_url: str, personal_story: str, sample_res
     """
     Gets a career analysis from the Gemini API.
     Returns a dictionary parsed from the AI's JSON response.
+    
+    Args:
+        linkedin_url (str): The URL of the user's LinkedIn profile
+        personal_story (str): The user's personal story/biography
+        sample_resume (str): A sample resume for formatting reference
+        
+    Returns:
+        Dict[str, Any]: A dictionary containing career paths analysis
+        
+    Raises:
+        ValueError: If the API response cannot be parsed or is invalid
+        ConnectionError: If there are issues connecting to the Gemini API
+        Exception: For any other unexpected errors
     """
     if not model:
-        logger.info("Gemini client not initialized, using mock career analysis")
+        logger.warning("Gemini client not initialized, falling back to mock career analysis")
+        logger.info("Using mock data for development/testing purposes")
         return _get_mock_career_analysis()
 
     try:
+        # Construct and log the prompt
         prompt = construct_prompt(linkedin_url, personal_story, sample_resume)
-        logger.info("Sending prompt to Gemini API...")
+        logger.info(f"Sending prompt to Gemini API for LinkedIn profile: {linkedin_url}")
         
-        response = await model.generate_content_async(prompt)
-        response_text = response.text
+        # Make API call with timeout handling
+        try:
+            response = await model.generate_content_async(prompt)
+            response_text = response.text
+            logger.info("Successfully received response from Gemini API")
+        except Exception as api_error:
+            logger.error(f"Failed to get response from Gemini API: {api_error}")
+            raise ConnectionError(f"Failed to connect to Gemini API: {str(api_error)}")
         
-        # Clean the response to ensure it's valid JSON
-        cleaned_response = response_text.strip().replace("```json", "").replace("```", "").strip()
+        # Clean and parse the response
+        try:
+            cleaned_response = response_text.strip().replace("```json", "").replace("```", "").strip()
+            analysis_data = json.loads(cleaned_response)
+            logger.debug(f"Parsed JSON response: {json.dumps(analysis_data, indent=2)}")
+        except json.JSONDecodeError as json_error:
+            logger.error(f"Failed to parse JSON from AI response: {json_error}")
+            logger.error(f"Raw response was: {response_text}")
+            raise ValueError(f"Invalid JSON response from AI: {str(json_error)}")
         
-        logger.info("Received response from Gemini API. Parsing JSON...")
-        
-        # Parse the JSON response
-        analysis_data = json.loads(cleaned_response)
-        
-        # Validate the data with Pydantic
-        validated_data = AnalysisResponse(**analysis_data)
-        
-        logger.info("Successfully parsed and validated AI response.")
-        return validated_data.dict()
+        # Validate with Pydantic
+        try:
+            validated_data = AnalysisResponse(**analysis_data)
+            logger.info(f"Successfully validated response with {len(validated_data.careerPaths)} career paths")
+            return validated_data.dict()
+        except Exception as validation_error:
+            logger.error(f"Failed to validate response data: {validation_error}")
+            raise ValueError(f"Response validation failed: {str(validation_error)}")
 
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON from AI response: {e}")
-        logger.error(f"Raw response was: {response_text}")
-        raise ValueError("The AI returned an invalid JSON response.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
+    except (ValueError, ConnectionError):
         raise
+    except Exception as e:
+        logger.error("Unexpected error in career analysis:", exc_info=True)
+        raise Exception(f"Career analysis failed: {str(e)}")
 
 def construct_refinement_prompt(linkedin_url: str, personal_story: str, sample_resume: str, selected_paths: List[str], refinement_text: str) -> str:
     """Constructs the refinement prompt for the Gemini API."""
@@ -202,54 +240,98 @@ def construct_refinement_prompt(linkedin_url: str, personal_story: str, sample_r
 async def get_strategy_refinement(linkedin_url: str, personal_story: str, sample_resume: str, selected_paths: List[str], refinement_text: str) -> Dict[str, Any]:
     """
     Calls the Gemini API to get refined career path suggestions based on user input.
+    
+    Args:
+        linkedin_url (str): The URL of the user's LinkedIn profile
+        personal_story (str): The user's personal story/biography
+        sample_resume (str): A sample resume for formatting reference
+        selected_paths (List[str]): List of career paths selected by the user
+        refinement_text (str): User's additional preferences or refinement criteria
+        
+    Returns:
+        Dict[str, Any]: A dictionary containing refined career path suggestions
+        
+    Raises:
+        ValueError: If the API response cannot be parsed or is invalid
+        ConnectionError: If there are issues connecting to the Gemini API
+        Exception: For any other unexpected errors
     """
     if not model:
-        logger.info("Gemini client not initialized, using mock strategy refinement")
+        logger.warning("Gemini client not initialized, falling back to mock strategy refinement")
+        logger.info("Using mock data for development/testing purposes")
         return _get_mock_strategy_refinement(selected_paths, refinement_text)
 
     try:
-        logger.info(f"Preparing to send refinement prompt with selected_paths: {selected_paths} and refinement_text: {refinement_text[:50]}...")
-        prompt = construct_refinement_prompt(linkedin_url, personal_story, sample_resume, selected_paths, refinement_text)
-        logger.info("Sending refinement prompt to Gemini API...")
+        # Log input parameters
+        logger.info(f"Starting strategy refinement for paths: {selected_paths}")
+        logger.debug(f"Refinement text: {refinement_text[:100]}...")
         
-        response = await model.generate_content_async(prompt)
-        response_text = response.text
+        # Construct and send prompt
+        try:
+            prompt = construct_refinement_prompt(linkedin_url, personal_story, sample_resume, selected_paths, refinement_text)
+            logger.info("Sending refinement prompt to Gemini API...")
+            
+            response = await model.generate_content_async(prompt)
+            response_text = response.text
+            logger.info("Successfully received refinement response from Gemini API")
+        except Exception as api_error:
+            logger.error(f"Failed to get refinement response from Gemini API: {api_error}")
+            raise ConnectionError(f"Failed to connect to Gemini API for refinement: {str(api_error)}")
         
-        # Clean the response to ensure it's valid JSON
-        cleaned_response = response_text.strip().replace("```json", "").replace("```", "").strip()
-        
-        logger.info("Received refinement response from Gemini API. Parsing JSON...")
-        
-        # Parse the JSON response
-        refinement_data = json.loads(cleaned_response)
-        
-        # Validate the data with Pydantic
-        validated_data = RefinementResponse(**refinement_data)
-        
-        logger.info("Successfully parsed and validated AI refinement response.")
-        return validated_data.dict()
+        # Parse and validate response
+        try:
+            # Clean and parse JSON
+            cleaned_response = response_text.strip().replace("```json", "").replace("```", "").strip()
+            refinement_data = json.loads(cleaned_response)
+            logger.debug(f"Parsed refinement JSON: {json.dumps(refinement_data, indent=2)}")
+            
+            # Validate with Pydantic
+            validated_data = RefinementResponse(**refinement_data)
+            logger.info(f"Successfully validated refinement response with {len(validated_data.refinedPaths)} new paths")
+            
+            return validated_data.dict()
+            
+        except json.JSONDecodeError as json_error:
+            logger.error(f"Failed to parse JSON from refinement response: {json_error}")
+            logger.error(f"Raw response was: {response_text}")
+            raise ValueError(f"Invalid JSON in refinement response: {str(json_error)}")
+        except Exception as validation_error:
+            logger.error(f"Failed to validate refinement data: {validation_error}")
+            raise ValueError(f"Refinement response validation failed: {str(validation_error)}")
 
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON from AI refinement response: {e}")
-        logger.error(f"Raw response was: {response_text}")
-        raise ValueError("The AI returned an invalid JSON response.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred during refinement: {e}", exc_info=True)
+    except (ValueError, ConnectionError):
         raise
+    except Exception as e:
+        logger.error("Unexpected error in strategy refinement:", exc_info=True)
+        raise Exception(f"Strategy refinement failed: {str(e)}")
 
 async def get_refined_strategy(refinement: str, selected_paths: List[CareerPath]) -> str:
     """
     Gets a refined career strategy from the Gemini API based on user feedback.
-    Returns a refined strategy message.
+    
+    Args:
+        refinement (str): User's feedback or refinement request
+        selected_paths (List[CareerPath]): List of career paths previously selected by the user
+        
+    Returns:
+        str: A refined strategy message incorporating user feedback
+        
+    Raises:
+        ConnectionError: If there are issues connecting to the Gemini API
+        Exception: For any other unexpected errors
     """
     if not model:
-        logger.info("Gemini client not initialized, using mock refined strategy")
+        logger.warning("Gemini client not initialized, falling back to mock refined strategy")
+        logger.info("Using mock data for development/testing purposes")
         return _get_mock_refined_strategy(refinement, selected_paths)
 
     try:
-        # Construct the refinement prompt
+        # Prepare prompt data
         paths_text = ", ".join([path.title for path in selected_paths])
+        logger.info(f"Generating refined strategy for paths: {paths_text}")
+        logger.debug(f"Refinement feedback: {refinement[:100]}...")
         
+        # Construct the prompt
         prompt = f"""
         You are an expert career strategist. The user has selected these career paths: {paths_text}
         
@@ -262,14 +344,26 @@ async def get_refined_strategy(refinement: str, selected_paths: List[CareerPath]
         Do not use markdown formatting or special characters.
         """
         
-        logger.info("Sending refinement prompt to Gemini API...")
-        
-        response = await model.generate_content_async(prompt)
-        response_text = response.text.strip()
-        
-        logger.info("Successfully received refined strategy from Gemini API.")
-        return response_text
+        # Make API call with error handling
+        try:
+            logger.info("Sending strategy refinement prompt to Gemini API...")
+            response = await model.generate_content_async(prompt)
+            response_text = response.text.strip()
+            
+            if not response_text:
+                raise ValueError("Received empty response from Gemini API")
+                
+            logger.info("Successfully received refined strategy")
+            logger.debug(f"Raw strategy response: {response_text}")
+            
+            return response_text
+            
+        except Exception as api_error:
+            logger.error(f"Failed to get strategy from Gemini API: {api_error}")
+            raise ConnectionError(f"Failed to connect to Gemini API for strategy: {str(api_error)}")
 
-    except Exception as e:
-        logger.error(f"An unexpected error occurred during refinement: {e}", exc_info=True)
+    except ConnectionError:
         raise
+    except Exception as e:
+        logger.error("Unexpected error in strategy refinement:", exc_info=True)
+        raise Exception(f"Strategy refinement failed: {str(e)}")
