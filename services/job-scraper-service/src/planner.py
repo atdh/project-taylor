@@ -13,11 +13,11 @@ class JobSearchStrategy(BaseModel):
     source: str  # e.g., "usajobs", "jsearch", "adzuna"
     method: str  # e.g., "api", "search"
     primary_query: str  # Main search query
-    fallback_queries: List[str]  # Progressively broader search terms
-    synonyms: List[str]  # Alternative phrasings
+    fallback_queries: List[str] = []  # Progressively broader search terms
+    synonyms: List[str] = []  # Alternative phrasings
     tool: str   # The specific tool/API to use
     cost_estimate: float  # Estimated cost for this search
-    priority: int  # Priority level (1-3, 1 being highest)
+    priority: int = 1  # Priority level (1-3, 1 being highest)
     location: Optional[str] = None  # Location filter (e.g., "San Francisco, CA", "remote")
     max_age_days: int = 7  # Maximum age of jobs in days
     backup_strategy: Optional[Dict] = None  # Backup strategy if primary fails
