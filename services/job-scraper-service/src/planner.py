@@ -12,13 +12,16 @@ class JobSearchStrategy(BaseModel):
     """Strategy for searching jobs for a specific career path"""
     source: str  # e.g., "usajobs", "jsearch", "adzuna"
     method: str  # e.g., "api", "search"
-    query: str  # The search query to use
+    primary_query: str  # Main search query
+    fallback_queries: List[str]  # Progressively broader search terms
+    synonyms: List[str]  # Alternative phrasings
     tool: str   # The specific tool/API to use
     cost_estimate: float  # Estimated cost for this search
     priority: int  # Priority level (1-3, 1 being highest)
     location: Optional[str] = None  # Location filter (e.g., "San Francisco, CA", "remote")
     max_age_days: int = 7  # Maximum age of jobs in days
     backup_strategy: Optional[Dict] = None  # Backup strategy if primary fails
+    current_query_index: int = 0  # Track which query variation we're currently using
 
 class SearchPlan(BaseModel):
     """Complete job search plan for all career paths"""
@@ -34,40 +37,59 @@ def construct_planning_prompt(career_paths: List[Dict]) -> str:
     ])
     
     prompt = f"""
-    You are an expert job search strategist. Plan the most effective way to find relevant jobs for these career paths:
+    You are an intelligent AI job search strategist. Think like a human recruiter who understands how different job boards work and how to find the best matches.
 
+    Career Paths to Search:
     {paths_info}
 
-    Available job search tools and their costs:
-    1. USAJobs API (free, best for government/federal jobs)
-    2. JSearch API (RapidAPI, $0.005 per search, excellent for tech jobs, startups, and remote positions)
-    3. Adzuna API (free with rate limits, good for general job search across industries)
-    4. Mock Data (free, fallback option for testing)
+    Job Board Characteristics:
+    1. JSearch API ($0.005/search):
+       - Strengths: Modern tech roles, startups, remote work
+       - Language: Prefers natural phrases like "Software Engineer Python" or "Machine Learning Developer"
+       - Best for: Tech, AI/ML, remote positions
 
-    For each career path, determine:
-    1. Best source to find relevant jobs
-    2. Most effective search method
-    3. Optimal search query
-    4. Which tool to use
-    5. Estimated cost
-    6. Priority level (1-3)
-    7. Backup strategy
+    2. Adzuna API (Free):
+       - Strengths: Broad industry coverage, traditional companies
+       - Language: Works better with simpler terms like "Software Engineer" or "Data Analyst"
+       - Best for: General roles, established companies
 
-    Return a JSON object with this structure:
+    3. USAJobs API (Free):
+       - Strengths: Government/federal positions
+       - Language: Formal job titles like "Computer Scientist" or "Information Technology Specialist"
+       - Best for: Government, federal contractors
+
+    Your Task: Create adaptive search strategies that think through multiple approaches like a human would.
+
+    For each career path, generate:
+    1. Primary search query (most specific)
+    2. Multiple fallback variations (progressively broader)
+    3. Alternative phrasings and synonyms
+    4. Job board-specific adaptations
+
+    Think through variations like:
+    - "Senior AI Engineer" → "Machine Learning Engineer" → "Software Engineer AI" → "Software Engineer" → "Developer"
+    - "Full Stack Developer" → "Software Engineer" → "Web Developer" → "Developer"
+    - Consider removing seniority levels if needed
+    - Try different skill combinations
+
+    Return JSON with this structure:
     {{
         "strategies": {{
             "career_path_title": {{
-                "source": "usajobs|jsearch|adzuna",
+                "source": "jsearch|adzuna|usajobs",
                 "method": "api",
-                "query": "optimized search query",
-                "tool": "specific_api_name",
+                "primary_query": "main search term",
+                "fallback_queries": ["broader term 1", "broader term 2", "broadest term"],
+                "synonyms": ["alternative phrasing 1", "alternative phrasing 2"],
+                "tool": "api_name",
                 "cost_estimate": 0.00,
                 "priority": 1,
                 "backup_strategy": {{
-                    "source": "alternative_api",
+                    "source": "alternative_source",
                     "method": "api",
-                    "query": "alternative_query",
-                    "tool": "alternative_api_name",
+                    "primary_query": "adapted for this job board",
+                    "fallback_queries": ["backup fallback 1", "backup fallback 2"],
+                    "tool": "alternative_api",
                     "cost_estimate": 0.00
                 }}
             }}
@@ -75,15 +97,12 @@ def construct_planning_prompt(career_paths: List[Dict]) -> str:
         "total_cost_estimate": 0.00
     }}
 
-    Strategy Guidelines:
-    - Total cost must stay under $0.20
-    - For tech/startup roles: Use JSearch first, then Adzuna as backup
-    - For government/federal roles: Use USAJobs first, then JSearch as backup
-    - For general roles: Use Adzuna first (free), then JSearch as backup
-    - Always include a backup strategy
-    - Use specific, targeted search queries
-    - Consider role seniority and industry when choosing sources
-    - For remote positions, prioritize JSearch as it has good remote job coverage
+    Guidelines:
+    - Stay under $0.20 total cost
+    - Generate 3-4 fallback queries per strategy
+    - Adapt language to each job board's preferences
+    - Think creatively about synonyms and variations
+    - Consider industry-specific terminology
     """
     return prompt
 
@@ -158,6 +177,27 @@ class JobSearchPlanner:
         
         for path in career_paths:
             title = path['title'].lower()
+            keywords = path['keywords']
+            
+            # Generate variations of search terms
+            role_terms = [kw for kw in keywords if any(term in kw.lower() for term in ['engineer', 'developer', 'architect'])]
+            skill_terms = [kw for kw in keywords if any(term in kw.lower() for term in ['python', 'ai', 'ml', 'cloud'])]
+            
+            # Create query variations from specific to broad
+            queries = []
+            if role_terms and skill_terms:
+                queries.append(f"{role_terms[0]} {' '.join(skill_terms[:2])}")  # Most specific
+                queries.append(f"{role_terms[0]} {skill_terms[0]}")  # Main role + primary skill
+                queries.append(role_terms[0])  # Just the role
+            else:
+                queries = [" ".join(keywords[:3])]  # Use first 3 keywords
+            
+            # Generate synonyms
+            synonyms = []
+            if 'engineer' in title.lower():
+                synonyms.extend(['developer', 'programmer', 'architect'])
+            if 'ai' in title.lower() or 'ml' in title.lower():
+                synonyms.extend(['machine learning', 'artificial intelligence', 'deep learning'])
             
             # Determine best source based on career path
             if 'federal' in title or 'government' in title:
@@ -174,14 +214,17 @@ class JobSearchPlanner:
             strategies[path['title']] = JobSearchStrategy(
                 source=primary[0],
                 method="api",
-                query=" ".join(path['keywords']),
+                primary_query=queries[0],  # Most specific query
+                fallback_queries=queries[1:],  # Broader variations
+                synonyms=synonyms,
                 tool=f"{primary[0]}_api",
                 cost_estimate=primary[1],
                 priority=1,
                 backup_strategy={
                     "source": backup[0],
                     "method": "api",
-                    "query": " ".join(path['keywords']),
+                    "primary_query": queries[0],  # Use same queries for backup
+                    "fallback_queries": queries[1:],
                     "tool": f"{backup[0]}_api",
                     "cost_estimate": backup[1]
                 }
