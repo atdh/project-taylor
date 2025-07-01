@@ -5,6 +5,7 @@ import logging
 from supabase import create_client, Client
 from postgrest.exceptions import APIError
 from typing import Optional, Dict, Any
+from requests.exceptions import ConnectionError
 from dotenv import load_dotenv
 # --- Import shared logging setup ---
 from common_utils.logging import get_logger # Import the setup function
@@ -18,8 +19,9 @@ load_dotenv()
 # logger = logging.getLogger(__name__)
 logger = get_logger("job-scraper-service") # Call the function to get the configured logger
 
-# --- Supabase Client Initialization ---
+from supabase import Client, ClientOptions
 
+# --- Supabase Client Initialization ---
 supabase_url: Optional[str] = os.getenv("SUPABASE_URL")
 supabase_key: Optional[str] = os.getenv("SUPABASE_KEY")
 supabase_client: Optional[Client] = None
@@ -32,11 +34,11 @@ if not supabase_key:
     raise ValueError("SUPABASE_KEY is required to connect to the database.")
 
 try:
-    # Create the Supabase client instance
+    # Create the Supabase client instance with default options
     supabase_client = create_client(supabase_url, supabase_key)
-    logger.info("Supabase client initialized successfully.") # Use the shared logger
+    logger.info("Supabase client initialized successfully.")
 except Exception as e:
-    logger.error(f"Failed to initialize Supabase client: {e}", exc_info=True) # Use the shared logger
+    logger.error(f"Failed to initialize Supabase client: {e}", exc_info=True)
     supabase_client = None
     raise e
 

@@ -2,10 +2,13 @@ from dotenv import load_dotenv
 import os
 
 if __name__ == "__main__":
-    # Load environment variables from the same .env file as AI Copilot Service
-    # This allows both services to share the same configuration
-    dotenv_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
-    load_dotenv(dotenv_path=dotenv_path)
+    # Load environment variables from local .env file
+    dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+    if os.path.exists(dotenv_path):
+        print(f"Loading environment variables from: {dotenv_path}")
+        load_dotenv(dotenv_path=dotenv_path)
+    else:
+        print(f"Warning: .env file not found at {dotenv_path}")
     
     print("Starting Job Scraper Service...")
     import uvicorn
