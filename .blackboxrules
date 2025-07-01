@@ -1,0 +1,16 @@
+GEMINI_API_KEY="AIzaSyD8xzFYhOkyA4WuqJCR5OINPSTUb_aBfzI"
+
+# Supabase Configuration
+SUPABASE_URL=https://eimwtmyayglmbcjodqkb.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpbXd0bXlheWdsbWJjam9kcWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU2MzgxMzgsImV4cCI6MjA2MTIxNDEzOH0.CSJSM7iQg1YwTZM_IKrPYzsJszFvTi-bqw7qeKq4Ysk
+
+USAJOBS_API_KEY=dcMcECoxAX1/KyXcclkEdhVzOquc4RgOt/G6tr+DrwA=
+USAJOBS_USER_AGENT=dhungelatul99@gmail.com
+
+JSEARCH_API_KEY=8219650e17mshe4ffebb29671aa3p19704fjsn5497ab0f221e
+JSEARCH_API_HOST=jsearch.p.rapidapi.com
+
+ADZUNA_APP_ID=78ef4ff0
+ADZUNA_APP_KEY=b3afe9fe926aef53aba48ae0cd5ddfde
+
+USE_MOCK_JOB_SOURCES=false

@@ -350,7 +350,7 @@ class AdzunaClient(JobSearchClient):
         super().__init__("Adzuna")
         self.app_id = os.getenv("ADZUNA_APP_ID")
         self.app_key = os.getenv("ADZUNA_APP_KEY")
-        self.base_url = "https://api.adzuna.com/v1/api/jobs/us/search/1"
+        self.base_url = "https://api.adzuna.com/v1/api/jobs/gb/search"  # Removed /1 from URL
         
         if not self.app_id or not self.app_key:
             raise ValueError("Adzuna app ID and key are required")
@@ -435,9 +435,9 @@ class AdzunaClient(JobSearchClient):
             "app_id": self.app_id,
             "app_key": self.app_key,
             "what": simplified_keywords,
+            "page": 1,
             "results_per_page": min(limit, 50),  # Adzuna max is 50
-            "content-type": "application/json",
-            "days_old": min(max_age_days, 90)  # Adzuna supports up to 90 days
+            "category": "it-jobs"  # Focus on IT jobs
         }
         
         if location:
