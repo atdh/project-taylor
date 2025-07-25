@@ -5,30 +5,36 @@ version: '3.8'
 # CURRENT STATUS: Docker deployment is in development
 # For now, run services individually using the run.py files in each service directory
 #
+# IMPORTANT: Job Scraper Service requires active Supabase database (currently deactivated)
+#
 # Working services (run locally):
-# - Job Scraper Service: cd services/job-scraper-service && python run.py (Port 8001)
 # - AI Copilot Service: cd services/ai-copilot-service && python run.py (Port 8002)  
 # - Resume Generator Service: cd services/resume-generator-service && python run.py (Port 8003)
 # - Frontend: Open frontend/dashboard.html in browser
+#
+# Database-dependent service (requires Supabase setup):
+# - Job Scraper Service: cd services/job-scraper-service && python run.py (Port 8001)
 
 services:
   # Core Service 1: Job Scraper Service (Port 8001)
   # Handles AI-powered job search, matching, and enrichment
-  # STATUS: Has Dockerfile - Ready for containerization
-  job-scraper-service:
-    build: ../services/job-scraper-service
-    ports:
-      - "8001:8001"
-    environment:
-      - PYTHONPATH=/app
-    env_file:
-      - ../.env
-    volumes:
-      - ../services/job-scraper-service:/app
-    working_dir: /app
-    command: python run.py
-    networks:
-      - taylor-network
+  # STATUS: REQUIRES ACTIVE SUPABASE DATABASE - Currently deactivated
+  # NOTE: This service depends on Supabase PostgreSQL for job data storage
+  # To enable: Set up Supabase project and configure SUPABASE_URL/SUPABASE_KEY in .env
+  # job-scraper-service:
+  #   build: ../services/job-scraper-service
+  #   ports:
+  #     - "8001:8001"
+  #   environment:
+  #     - PYTHONPATH=/app
+  #   env_file:
+  #     - ../.env
+  #   volumes:
+  #     - ../services/job-scraper-service:/app
+  #   working_dir: /app
+  #   command: python run.py
+  #   networks:
+  #     - taylor-network
 
   # Core Service 2: AI Copilot Service (Port 8002)
   # Provides career analysis and strategy refinement
