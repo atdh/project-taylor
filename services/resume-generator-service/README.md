@@ -1,106 +1,158 @@
 # Resume Generator Service
 
-A flexible resume generation service that supports multiple resume generation engines while maintaining a consistent API interface.
+AI-powered resume generation service that creates tailored resumes for specific job opportunities using multiple professional themes.
 
-## Architecture
+## Features
 
-This service follows a modular architecture that allows integration with different resume generation tools:
+- **Multiple Themes** - Professional resume themes (elegant, modern, etc.)
+- **Job-Tailored** - AI customizes resumes for specific job requirements
+- **Multiple Formats** - HTML, PDF, and JSON output
+- **Flexible Architecture** - Modular engine system for different generators
+- **Fast Generation** - Quick resume creation and formatting
 
-1. **JSON Resume Engine**
-   - Uses the JSON Resume ecosystem
-   - Access to multiple professional themes
-   - HTML and PDF output
+## Quick Start
 
-2. **Reactive Resume Engine** (Planned)
-   - Modern, customizable templates
-   - Docker-based integration
-   - PDF and JSON export
+### Prerequisites
+- Python 3.10+
+- Node.js and npm (for JSON Resume CLI)
 
-3. **Future Engines**
-   - LaTeX-based generators
-   - Other resume builders
-   - Custom template engines
+### 1. Install Dependencies
 
-See [architecture.md](architecture.md) for detailed design documentation.
-
-## Setup
-
-1. **Install Python Dependencies**
+**Python Dependencies:**
 ```bash
-pip install fastapi uvicorn pydantic
+cd services/resume-generator-service
+pip install -r requirements.txt
 ```
 
-2. **Install JSON Resume CLI** (for JSON Resume engine)
+**JSON Resume CLI:**
 ```bash
 npm install -g resume-cli
 npm install -g jsonresume-theme-elegant jsonresume-theme-modern
 ```
 
-3. **Environment Setup**
+### 2. Run the Service
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+python run.py
+# Service starts on http://localhost:8003
 ```
 
-## Usage
+## API Endpoints
 
-### 1. Start the Service
-```bash
-uvicorn src.main:app --reload --port 8003
+### Health Check
+```
+GET /health
 ```
 
-### 2. API Endpoints
+### Generate Resume
+```
+POST /generate
+```
+Generate a tailored resume for a specific job opportunity.
 
-#### Generate Resume
-```bash
-POST /api/generate
+**Request Body:**
+```json
 {
-    "engine": "jsonresume",
-    "theme": "elegant",
-    "format": "pdf",
-    "data": {
-        # JSON Resume format data
-    }
+  "engine": "jsonresume",
+  "theme": "elegant", 
+  "format": "pdf",
+  "job_description": "Software Engineer position...",
+  "data": {
+    // JSON Resume format data
+  }
 }
 ```
 
-#### List Available Engines
-```bash
-GET /api/engines
+### Available Themes
+```
+GET /themes
+```
+Get list of available resume themes.
+
+### Sample Data
+```
+GET /sample-data
+```
+Get sample resume data in JSON Resume format.
+
+## Available Themes
+
+- **elegant** - Clean, professional design
+- **modern** - Contemporary styling
+- **classic** - Traditional format
+- **minimal** - Simple, clean layout
+
+## Resume Engines
+
+### JSON Resume Engine (Current)
+- Uses the [JSON Resume](https://jsonresume.org/) ecosystem
+- Multiple professional themes available
+- HTML and PDF output support
+- Industry-standard format
+
+### Future Engines (Planned)
+- **Reactive Resume** - Modern, customizable templates
+- **LaTeX Engine** - Academic and technical resumes
+- **Custom Templates** - Branded company templates
+
+## Data Format
+
+The service uses the [JSON Resume schema](https://jsonresume.org/schema/) as its standard format:
+
+```json
+{
+  "basics": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "(555) 123-4567",
+    "summary": "Experienced software engineer..."
+  },
+  "work": [...],
+  "education": [...],
+  "skills": [...],
+  "projects": [...]
+}
 ```
 
-#### Get Sample Data
-```bash
-GET /api/sample-data
-```
+## AI Customization
 
-## Resume Data
+The service can tailor resumes by:
+- **Keyword Optimization** - Matches job description keywords
+- **Skill Highlighting** - Emphasizes relevant skills
+- **Experience Prioritization** - Reorders experience by relevance
+- **Summary Customization** - Writes targeted professional summaries
 
-The service uses the [JSON Resume schema](https://jsonresume.org/schema/) as its base format. Your resume data is stored in:
+## Troubleshooting
 
-- `resume_atul_dhungel.json` - Your personal resume data
+**Service won't start?**
+- Verify Python 3.10+ is installed
+- Check that Node.js and npm are available
+- Ensure JSON Resume CLI is installed globally
 
-## Adding New Engines
+**Resume generation failing?**
+- Verify JSON Resume CLI is working: `resume --version`
+- Check that themes are installed
+- Review logs for specific error messages
 
-1. Create a new adapter in `src/engine_registry.py`
+**PDF generation issues?**
+- Ensure system has PDF generation capabilities
+- Try HTML format first to isolate issues
+- Check theme compatibility
+
+## Contributing
+
+This service needs help with:
+- **New Themes** - Additional professional resume themes
+- **AI Enhancement** - Better job-specific customization
+- **Mobile Optimization** - Mobile-friendly resume formats
+- **New Engines** - Integration with other resume builders
+- **Testing** - More comprehensive test coverage
+
+### Adding New Engines
+
+1. Create adapter in `src/engine_registry.py`
 2. Implement the `ResumeEngineAdapter` interface
 3. Add format conversion in `src/data_converter.py`
 4. Register the engine in `EngineRegistry`
-
-## Testing
-
-```bash
-pytest tests/
-```
-
-## Future Enhancements
-
-- [ ] Add Reactive Resume integration
-- [ ] Support LaTeX templates
-- [ ] Add template customization
-- [ ] Implement caching
-- [ ] Add batch generation
-- [ ] Support more output formats
 
 ## Directory Structure
 
@@ -110,23 +162,12 @@ resume-generator-service/
 │   ├── main.py              # FastAPI application
 │   ├── engine_registry.py   # Engine management
 │   └── data_converter.py    # Format conversions
-├── data/
-│   └── resume_atul_dhungel.json
+├── data/                    # Sample resume data
+├── output/                  # Generated resumes
 ├── engines/                 # Engine-specific files
-│   └── jsonresume/
-├── tests/
-├── README.md
-└── architecture.md
+└── run.py                   # Service launcher
 ```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Implement your changes
-4. Add tests
-5. Submit a pull request
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License - see [LICENSE](../../LICENSE) for details.

@@ -221,6 +221,16 @@ class AIJobEnricher:
             logger.error(f"Error configuring AI Job Enricher: {e}")
             self.model = None
 
+    def _clean_json_response(self, response_text: str) -> str:
+        """Clean AI response text to extract valid JSON"""
+        text = response_text.strip()
+        # Remove markdown code blocks if present
+        if text.startswith('```json'):
+            text = text.replace('```json', '').replace('```', '').strip()
+        elif text.startswith('```'):
+            text = text.replace('```', '').strip()
+        return text
+
     async def enrich_job(self, job_data: Dict, source: str) -> EnrichedJobData:
         """
         Enrich job data with AI-powered analysis
@@ -235,27 +245,45 @@ class AIJobEnricher:
                 source
             )
             company_response = await self.model.generate_content_async(company_prompt)
-            company_insights = CompanyInsights(**json.loads(company_response.text))
+            
+            # Clean and parse JSON response
+            company_text = company_response.text.strip()
+            # Remove markdown code blocks if present
+            if company_text.startswith('```json'):
+                company_text = company_text.replace('```json', '').replace('```', '').strip()
+            elif company_text.startswith('```'):
+                company_text = company_text.replace('```', '').strip()
+            
+            try:
+                company_data = json.loads(company_text)
+                company_insights = CompanyInsights(**company_data)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse company analysis JSON: {e}. Raw response: {company_text[:200]}...")
+                raise e
             
             # 2. Job Quality Analysis
             quality_prompt = construct_job_quality_prompt(job_data)
             quality_response = await self.model.generate_content_async(quality_prompt)
-            quality_score = JobQualityScore(**json.loads(quality_response.text))
+            quality_text = self._clean_json_response(quality_response.text)
+            quality_score = JobQualityScore(**json.loads(quality_text))
             
             # 3. Skills Analysis
             skills_prompt = construct_skills_prompt(job_data)
             skills_response = await self.model.generate_content_async(skills_prompt)
-            skills_analysis = SkillsAnalysis(**json.loads(skills_response.text))
+            skills_text = self._clean_json_response(skills_response.text)
+            skills_analysis = SkillsAnalysis(**json.loads(skills_text))
             
             # 4. Salary Analysis
             salary_prompt = construct_salary_prompt(job_data)
             salary_response = await self.model.generate_content_async(salary_prompt)
-            salary_insights = SalaryInsights(**json.loads(salary_response.text))
+            salary_text = self._clean_json_response(salary_response.text)
+            salary_insights = SalaryInsights(**json.loads(salary_text))
             
             # 5. Location Analysis
             location_prompt = construct_location_prompt(job_data)
             location_response = await self.model.generate_content_async(location_prompt)
-            location_analysis = LocationAnalysis(**json.loads(location_response.text))
+            location_text = self._clean_json_response(location_response.text)
+            location_analysis = LocationAnalysis(**json.loads(location_text))
             
             # Calculate processing time
             end_time = datetime.now()
