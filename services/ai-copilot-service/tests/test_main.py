@@ -12,18 +12,13 @@ VALID_REQUEST = {
 }
 
 VALID_REFINEMENT_REQUEST = {
-    "refinement": "I want to focus more on cloud architecture",
-    "selectedPaths": [
-        {
-            "title": "Technical Lead",
-            "strengths": "Strong leadership and technical skills",
-            "keywords": ["Leadership", "Architecture", "Mentoring"]
-        },
-        {
-            "title": "Senior Developer",
-            "strengths": "Deep technical expertise",
-            "keywords": ["Python", "React", "Node.js"]
-        }
+    "linkedin_url": "https://www.linkedin.com/in/testuser",
+    "personal_story": "I am a software engineer with 5 years of experience in full-stack development. I have worked on various projects using React, Node.js, and Python. I am passionate about creating user-friendly applications and have led several successful product launches. I enjoy solving complex problems and collaborating with cross-functional teams to deliver high-quality software solutions. Throughout my career, I have consistently demonstrated strong problem-solving abilities and a commitment to delivering high-quality code. I have experience working in agile environments and have successfully mentored junior developers.",
+    "sample_resume": "Senior Software Engineer with expertise in Python, React, and Node.js. Led development of multiple successful products. Strong background in system design and team leadership. Experience includes building scalable web applications, implementing CI/CD pipelines, and mentoring junior developers. Implemented microservices architecture that improved system performance by 40%. Developed and maintained CI/CD pipelines using Jenkins and Docker. Created automated testing frameworks that reduced QA time by 60%. Led a team of 5 developers in delivering a major product feature ahead of schedule. Collaborated with product managers and designers to define technical requirements and deliver user-focused solutions. Participated in code reviews and established best practices for the development team. Worked extensively with cloud platforms including AWS and Azure to deploy and maintain production applications. Experience with database design and optimization for both SQL and NoSQL systems. Strong understanding of software development lifecycle and agile methodologies.",
+    "refinement_text": "I want to focus more on cloud architecture",
+    "selected_paths": [
+        "Technical Lead",
+        "Senior Developer"
     ]
 }
 
@@ -84,7 +79,7 @@ def test_refine_strategy_valid():
 def test_refine_strategy_no_paths():
     """Test strategy refinement with no selected paths"""
     invalid_request = VALID_REFINEMENT_REQUEST.copy()
-    invalid_request["selectedPaths"] = []
+    invalid_request["selected_paths"] = []
     
     response = client.post("/refine-strategy", json=invalid_request)
     assert response.status_code == 422  # Validation error
@@ -92,7 +87,7 @@ def test_refine_strategy_no_paths():
 def test_refine_strategy_empty_refinement():
     """Test strategy refinement with empty refinement text"""
     invalid_request = VALID_REFINEMENT_REQUEST.copy()
-    invalid_request["refinement"] = ""
+    invalid_request["refinement_text"] = ""
     
     response = client.post("/refine-strategy", json=invalid_request)
     assert response.status_code == 422  # Validation error
@@ -136,9 +131,9 @@ def test_analyze_career_empty_fields():
     assert "detail" in data  # Should contain validation error details
 
 def test_refine_strategy_invalid_linkedin():
-    """Test strategy refinement with invalid selected paths structure"""
+    """Test strategy refinement with invalid LinkedIn URL"""
     invalid_request = VALID_REFINEMENT_REQUEST.copy()
-    invalid_request["selectedPaths"] = [{"invalid": "structure"}]  # Missing required fields
+    invalid_request["linkedin_url"] = "not-a-url"
     
     response = client.post("/refine-strategy", json=invalid_request)
     assert response.status_code == 422  # Validation error
@@ -147,14 +142,8 @@ def test_refine_strategy_missing_fields():
     """Test strategy refinement with missing required fields"""
     invalid_request = {
         "linkedin_url": "https://www.linkedin.com/in/testuser",
-        "selectedPaths": [
-            {
-                "title": "Technical Lead",
-                "strengths": "Strong leadership and technical skills",
-                "keywords": ["Leadership", "Architecture", "Mentoring"]
-            }
-        ]
-        # Missing other required fields
+        "selected_paths": ["Technical Lead"]
+        # Missing personal_story, sample_resume, and refinement_text
     }
     
     response = client.post("/refine-strategy", json=invalid_request)
