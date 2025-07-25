@@ -1,121 +1,154 @@
 version: '3.8'
 
+# Project Taylor - Core Services Docker Compose
+# This configuration includes only the 3 core working services
+# Additional services and infrastructure can be added for production deployment
+
 services:
-  job-scraper:
+  # Core Service 1: Job Scraper Service (Port 8001)
+  # Handles AI-powered job search, matching, and enrichment
+  job-scraper-service:
     build: ../services/job-scraper-service
     ports:
-      - "8000:8000"
+      - "8001:8001"
+    environment:
+      - PYTHONPATH=/app
     env_file:
-      - ../services/job-scraper-service/.env
+      - ../.env
     volumes:
       - ../services/job-scraper-service:/app
-    depends_on:
-      - redis
+    working_dir: /app
+    command: python run.py
     networks:
       - taylor-network
 
-  github-jobs:
-    build: ../services/github-jobs-service
-    ports:
-      - "8004:8004"
-    env_file:
-      - ../services/github-jobs-service/.env
-    volumes:
-      - ../services/github-jobs-service:/app
-    depends_on:
-      - redis
-    networks:
-      - taylor-network
-
-  filter:
-    build: ../services/filter-service
-    ports:
-      - "8001:8001"
-    env_file:
-      - ../services/filter-service/.env
-    volumes:
-      - ../services/filter-service:/app
-    depends_on:
-      - redis
-      - rabbitmq
-    networks:
-      - taylor-network
-
-  resume-generator:
-    build: ../services/resume-generator-service
+  # Core Service 2: AI Copilot Service (Port 8002)
+  # Provides career analysis and strategy refinement
+  ai-copilot-service:
+    build: ../services/ai-copilot-service
     ports:
       - "8002:8002"
+    environment:
+      - PYTHONPATH=/app
     env_file:
-      - ../services/resume-generator-service/.env
+      - ../.env
     volumes:
-      - ../services/resume-generator-service:/app
-      - resume-storage:/app/storage
-    depends_on:
-      - redis
+      - ../services/ai-copilot-service:/app
+    working_dir: /app
+    command: python run.py
     networks:
       - taylor-network
 
-  email-delivery:
-    build: ../services/email-delivery-service
+  # Core Service 3: Resume Generator Service (Port 8003)
+  # Generates tailored resumes with multiple themes
+  resume-generator-service:
+    build: ../services/resume-generator-service
     ports:
       - "8003:8003"
+    environment:
+      - PYTHONPATH=/app
     env_file:
-      - ../services/email-delivery-service/.env
+      - ../.env
     volumes:
-      - ../services/email-delivery-service:/app
+      - ../services/resume-generator-service:/app
+      - resume-storage:/app/output
+    working_dir: /app
+    command: python run.py
+    networks:
+      - taylor-network
+
+  # Frontend: Static file server for the dashboard
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ../frontend:/usr/share/nginx/html:ro
     depends_on:
-      - redis
+      - job-scraper-service
+      - ai-copilot-service
+      - resume-generator-service
     networks:
       - taylor-network
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - taylor-network
+# TODO: Add for production deployment
+# Uncomment and configure these services when ready for production:
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-    networks:
-      - taylor-network
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   networks:
+  #     - taylor-network
 
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus:/etc/prometheus
-      - prometheus-data:/prometheus
-    networks:
-      - taylor-network
+  # filter-service:
+  #   build: ../services/filter-service
+  #   ports:
+  #     - "8004:8004"
+  #   env_file:
+  #     - ../.env
+  #   depends_on:
+  #     - redis
+  #   networks:
+  #     - taylor-network
 
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./grafana:/etc/grafana
-      - grafana-data:/var/lib/grafana
-    depends_on:
-      - prometheus
-    networks:
-      - taylor-network
+  # github-jobs-service:
+  #   build: ../services/github-jobs-service
+  #   ports:
+  #     - "8005:8005"
+  #   env_file:
+  #     - ../.env
+  #   depends_on:
+  #     - redis
+  #   networks:
+  #     - taylor-network
+
+  # email-delivery-service:
+  #   build: ../services/email-delivery-service
+  #   ports:
+  #     - "8006:8006"
+  #   env_file:
+  #     - ../.env
+  #   depends_on:
+  #     - redis
+  #   networks:
+  #     - taylor-network
+
+  # Monitoring Stack
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./prometheus:/etc/prometheus
+  #     - prometheus-data:/prometheus
+  #   networks:
+  #     - taylor-network
+
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   ports:
+  #     - "3001:3000"
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   depends_on:
+  #     - prometheus
+  #   networks:
+  #     - taylor-network
 
 volumes:
-  redis-data:
-  rabbitmq-data:
   resume-storage:
-  prometheus-data:
-  grafana-data:
+  # redis-data:
+  # prometheus-data:
+  # grafana-data:
 
 networks:
   taylor-network:
     driver: bridge
+
+# Usage:
+# docker-compose up -d                    # Start core services
+# docker-compose logs -f [service-name]   # View logs
+# docker-compose down                     # Stop all services
