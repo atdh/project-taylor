@@ -201,7 +201,7 @@ This project was built by **Atul Dhungel**, a software engineer passionate about
 
 **Contact:**
 - GitHub: [@atdh](https://github.com/atdh)
-- LinkedIn: [Connect with Atul](https://linkedin.com/in/atuldhungel)
+- LinkedIn: [Connect with Atul](https://linkedin.com/in/atul-dhungel)
 - Email: Available in GitHub profile
 
 *If you're interested in hiring or collaborating, feel free to reach out!*
