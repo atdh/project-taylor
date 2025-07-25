@@ -111,16 +111,6 @@ services:
   #   networks:
   #     - taylor-network
 
-  # github-jobs-service:
-  #   build: ../services/github-jobs-service
-  #   ports:
-  #     - "8005:8005"
-  #   env_file:
-  #     - ../.env
-  #   depends_on:
-  #     - redis
-  #   networks:
-  #     - taylor-network
 
   # email-delivery-service:
   #   build: ../services/email-delivery-service
