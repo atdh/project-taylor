@@ -1,12 +1,20 @@
 version: '3.8'
 
 # Project Taylor - Core Services Docker Compose
-# This configuration includes only the 3 core working services
-# Additional services and infrastructure can be added for production deployment
+# 
+# CURRENT STATUS: Docker deployment is in development
+# For now, run services individually using the run.py files in each service directory
+#
+# Working services (run locally):
+# - Job Scraper Service: cd services/job-scraper-service && python run.py (Port 8001)
+# - AI Copilot Service: cd services/ai-copilot-service && python run.py (Port 8002)  
+# - Resume Generator Service: cd services/resume-generator-service && python run.py (Port 8003)
+# - Frontend: Open frontend/dashboard.html in browser
 
 services:
   # Core Service 1: Job Scraper Service (Port 8001)
   # Handles AI-powered job search, matching, and enrichment
+  # STATUS: Has Dockerfile - Ready for containerization
   job-scraper-service:
     build: ../services/job-scraper-service
     ports:
@@ -24,52 +32,55 @@ services:
 
   # Core Service 2: AI Copilot Service (Port 8002)
   # Provides career analysis and strategy refinement
-  ai-copilot-service:
-    build: ../services/ai-copilot-service
-    ports:
-      - "8002:8002"
-    environment:
-      - PYTHONPATH=/app
-    env_file:
-      - ../.env
-    volumes:
-      - ../services/ai-copilot-service:/app
-    working_dir: /app
-    command: python run.py
-    networks:
-      - taylor-network
+  # STATUS: Missing Dockerfile - TODO for containerization
+  # ai-copilot-service:
+  #   build: ../services/ai-copilot-service
+  #   ports:
+  #     - "8002:8002"
+  #   environment:
+  #     - PYTHONPATH=/app
+  #   env_file:
+  #     - ../.env
+  #   volumes:
+  #     - ../services/ai-copilot-service:/app
+  #   working_dir: /app
+  #   command: python run.py
+  #   networks:
+  #     - taylor-network
 
   # Core Service 3: Resume Generator Service (Port 8003)
   # Generates tailored resumes with multiple themes
-  resume-generator-service:
-    build: ../services/resume-generator-service
-    ports:
-      - "8003:8003"
-    environment:
-      - PYTHONPATH=/app
-    env_file:
-      - ../.env
-    volumes:
-      - ../services/resume-generator-service:/app
-      - resume-storage:/app/output
-    working_dir: /app
-    command: python run.py
-    networks:
-      - taylor-network
+  # STATUS: Missing Dockerfile - TODO for containerization
+  # resume-generator-service:
+  #   build: ../services/resume-generator-service
+  #   ports:
+  #     - "8003:8003"
+  #   environment:
+  #     - PYTHONPATH=/app
+  #   env_file:
+  #     - ../.env
+  #   volumes:
+  #     - ../services/resume-generator-service:/app
+  #     - resume-storage:/app/output
+  #   working_dir: /app
+  #   command: python run.py
+  #   networks:
+  #     - taylor-network
 
   # Frontend: Static file server for the dashboard
-  frontend:
-    image: nginx:alpine
-    ports:
-      - "3000:80"
-    volumes:
-      - ../frontend:/usr/share/nginx/html:ro
-    depends_on:
-      - job-scraper-service
-      - ai-copilot-service
-      - resume-generator-service
-    networks:
-      - taylor-network
+  # STATUS: Ready when backend services are containerized
+  # frontend:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "3000:80"
+  #   volumes:
+  #     - ../frontend:/usr/share/nginx/html:ro
+  #   depends_on:
+  #     - job-scraper-service
+  #     - ai-copilot-service
+  #     - resume-generator-service
+  #   networks:
+  #     - taylor-network
 
 # TODO: Add for production deployment
 # Uncomment and configure these services when ready for production:
