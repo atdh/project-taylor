@@ -39,6 +39,7 @@ ENV/
 *.env
 .env.*
 !.env.example
+.blackboxrules
 
 # Logs
 logs/

@@ -9,7 +9,7 @@ from requests.exceptions import ConnectionError
 # --- Import shared logging setup ---
 from common_utils.logging import get_logger # Import the setup function
 
-# Environment variables are loaded by run.py from .blackboxrules
+# Environment variables are loaded by run.py from .env
 
 # --- Initialize shared logger ---
 # Remove the basicConfig and getLogger(__name__) lines

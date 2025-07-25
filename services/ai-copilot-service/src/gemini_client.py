@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Environment variables are loaded by run.py from .blackboxrules
+# Environment variables are loaded by run.py from .env
 # No need to load them again here
 
 # --- Configure the Gemini API client ---
@@ -19,13 +19,13 @@ try:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     logger.info("Found GEMINI_API_KEY in environment")
     if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY environment variable not found. Please add it to your .blackboxrules file.")
+        raise ValueError("GEMINI_API_KEY environment variable not found. Please add it to your .env file.")
     genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel('gemini-1.5-flash')
     logger.info("Gemini client configured successfully with API key.")
 except ValueError as e:
     logger.error(f"Configuration Error: {e}")
-    logger.error("Please ensure GEMINI_API_KEY is properly set in .blackboxrules")
+    logger.error("Please ensure GEMINI_API_KEY is properly set in .env")
     model = None
 except Exception as e:
     logger.error(f"Unexpected error configuring Gemini client: {e}")
