@@ -103,6 +103,12 @@ services/email-delivery-service/attachments/
 *.cert
 *.crt
 
+# Supabase config and environment files
+supabase/config.toml
+.env
+*.env
+.env.*
+
 # Database
 *.sqlite
 *.sqlite3
